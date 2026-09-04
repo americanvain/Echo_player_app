@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # 只有配置了签名密钥的 tag 构建才会把 APK 附到 Release，避免用 debug 签名覆盖手动上传的正式包
+      KS: ${{ secrets.ECHO_KEYSTORE_BASE64 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -23,8 +26,6 @@ jobs:
 
       - name: Restore release keystore
         if: startsWith(github.ref, 'refs/tags/v') && env.KS != ''
-        env:
-          KS: ${{ secrets.ECHO_KEYSTORE_BASE64 }}
         run: echo "$KS" | base64 -d > "$RUNNER_TEMP/echo_release.jks"
 
       - name: Build
@@ -46,7 +47,7 @@ jobs:
           path: app/build/outputs/apk/**/*.apk
 
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && env.KS != ''
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/*.apk
