@@ -41,6 +41,7 @@ import com.echoplayer.app.util.Words
 fun WordCard(
     word: String,
     translation: String?,
+    phonetic: String? = null,
     loading: Boolean,
     hint: String?,
     inVocab: Boolean,
@@ -58,7 +59,13 @@ fun WordCard(
             .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(key, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(key, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                if (!phonetic.isNullOrBlank()) {
+                    Spacer(Modifier.width(8.dp))
+                    Text("/$phonetic/", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             IconButton(onClick = onSpeak, modifier = Modifier.size(34.dp)) {
                 Icon(Icons.Default.VolumeUp, "朗读", Modifier.size(19.dp))
             }

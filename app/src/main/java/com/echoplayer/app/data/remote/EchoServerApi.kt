@@ -86,6 +86,8 @@ class EchoServerApi(private val baseUrlProvider: () -> String) {
 
     suspend fun generatePractice(request: GeneratePracticeRequest): GeneratePracticeResponse = post("/practice/generate", request)
 
+    suspend fun chat(request: ChatRequest): ChatResponse = post("/chat", request)
+
     suspend fun reportPractice(request: PracticeReportRequest) { post<PracticeReportRequest, kotlinx.serialization.json.JsonObject>("/practice/report", request) }
 
     // ---- helpers -------------------------------------------------------------

@@ -239,3 +239,22 @@ interface VocabDao {
     @Query("UPDATE vocab SET familiarity = :familiarity, reviewCount = reviewCount + 1, lastReviewedAt = :at WHERE id = :id")
     suspend fun review(id: Long, familiarity: Int, at: Long)
 }
+
+
+@Dao
+interface ChatDao {
+    @Query("SELECT * FROM chat_messages WHERE unitId = :unitId ORDER BY createdAt ASC")
+    fun observeForUnit(unitId: String): Flow<List<ChatMessageEntity>>
+
+    @Query("SELECT * FROM chat_messages WHERE unitId = :unitId ORDER BY createdAt ASC")
+    suspend fun forUnit(unitId: String): List<ChatMessageEntity>
+
+    @Insert
+    suspend fun insert(message: ChatMessageEntity): Long
+
+    @Query("DELETE FROM chat_messages WHERE unitId = :unitId")
+    suspend fun clearUnit(unitId: String)
+
+    @Query("SELECT COUNT(*) FROM chat_messages WHERE role = 'user'")
+    fun observeQuestionCount(): Flow<Int>
+}

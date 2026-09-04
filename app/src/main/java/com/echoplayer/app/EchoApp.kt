@@ -6,6 +6,8 @@ import com.echoplayer.app.audio.TtsEngine
 import com.echoplayer.app.audio.WavRecorder
 import com.echoplayer.app.data.SettingsStore
 import com.echoplayer.app.data.db.EchoDatabase
+import com.echoplayer.app.data.local.OfflineDictionary
+import com.echoplayer.app.data.repo.ChatRepository
 import com.echoplayer.app.data.remote.EchoServerApi
 import com.echoplayer.app.data.repo.IssueRepository
 import com.echoplayer.app.data.repo.MaterialRepository
@@ -28,6 +30,8 @@ class EchoApp : Application() {
     val practice by lazy { PracticeRepository(db.practiceDao(), api) }
     val issues by lazy { IssueRepository(db.issueDao(), api) }
     val vocab by lazy { VocabRepository(db.vocabDao()) }
+    val dictionary by lazy { OfflineDictionary(this) }
+    val chat by lazy { ChatRepository(db.chatDao(), api, dictionary) }
     val practiceSets by lazy { PracticeSetRepository(db.practiceSetDao(), db.issueDao(), db.vocabDao(), db.practiceDao(), db.materialDao(), api) }
 
     val tts by lazy { TtsEngine(this) }

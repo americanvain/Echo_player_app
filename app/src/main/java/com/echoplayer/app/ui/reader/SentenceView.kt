@@ -179,8 +179,10 @@ fun SentenceView(
                 maskedWords.forEach { i ->
                     val r = ranges.getOrNull(i) ?: return@forEach
                     val box = boxOf(l, r)
+                    val selected = selection?.contains(i) == true
+                    // 被盖住的词选中时，色块换成主题色，否则看不出选了什么
                     drawRoundRect(
-                        color = maskColor.copy(alpha = 0.75f),
+                        color = if (selected) selectionColor.copy(alpha = 0.85f) else maskColor.copy(alpha = 0.75f),
                         topLeft = Offset(box.left, box.top + 1f),
                         size = Size(box.width, box.height - 2f),
                         cornerRadius = CornerRadius(4f, 4f),

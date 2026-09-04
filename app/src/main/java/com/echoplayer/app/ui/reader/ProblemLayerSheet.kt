@@ -77,6 +77,7 @@ fun ProblemLayerSheet(
     layer: ProblemLayer,
     sentence: String,
     initialSpan: WordSpan?,
+    maskedWords: Set<Int> = emptySet(),
     serverConfigured: Boolean,
     onAction: (LayerAction) -> Unit,
     onRecord: suspend (IssueRepository.Draft) -> Long?,
@@ -88,6 +89,8 @@ fun ProblemLayerSheet(
     val tokens = remember(sentence) { Words.tokenize(sentence) }
 
     var span by remember { mutableStateOf(initialSpan) }
+    var peek by remember { mutableStateOf(false) }
+    val hiddenHere = maskedWords.isNotEmpty() && !peek
     val subtypes = remember { mutableListOf<String>().toMutableStateList() }
     var severity by remember { mutableStateOf(0) }
     var misheard by remember { mutableStateOf("") }
@@ -146,13 +149,20 @@ fun ProblemLayerSheet(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 tokens.forEach { tok ->
                     val selected = span?.contains(tok.index) == true
+                    val masked = hiddenHere && tok.index in maskedWords
                     Text(
-                        tok.display,
+                        if (masked) "█".repeat(tok.display.length.coerceIn(2, 8)) else tok.display,
                         style = MaterialTheme.typography.bodyLarge,
                         color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (selected) color else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(
+                                when {
+                                    selected -> color
+                                    masked -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                                    else -> MaterialTheme.colorScheme.surfaceVariant
+                                }
+                            )
                             .clickable {
                                 val cur = span
                                 span = when {
@@ -171,6 +181,10 @@ fun ProblemLayerSheet(
                     onClick = { span = null },
                     label = { Text("整句都卡") },
                 )
+                if (maskedWords.isNotEmpty()) {
+                    Spacer(Modifier.width(4.dp))
+                    FilterChip(selected = peek, onClick = { peek = !peek }, label = { Text(if (peek) "再盖上" else "看一眼原文") })
+                }
                 Spacer(Modifier.width(8.dp))
                 Text(
                     spanText?.let { "已选 ${span?.size} 个词" } ?: "点词选起点，再点一个词选到那里",

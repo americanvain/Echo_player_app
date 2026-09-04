@@ -15,10 +15,11 @@ import androidx.room.RoomDatabase
         IssueEntity::class,
         VocabEntity::class,
         PracticeSetEntity::class,
+        ChatMessageEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class EchoDatabase : RoomDatabase() {
     abstract fun materialDao(): MaterialDao
@@ -26,6 +27,7 @@ abstract class EchoDatabase : RoomDatabase() {
     abstract fun issueDao(): IssueDao
     abstract fun vocabDao(): VocabDao
     abstract fun practiceSetDao(): PracticeSetDao
+    abstract fun chatDao(): ChatDao
 
     companion object {
         fun build(context: Context): EchoDatabase =

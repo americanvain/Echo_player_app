@@ -14,9 +14,9 @@ ui/            Jetpack Compose 页面 + ViewModel（每个页面一个 VM，只�
   settings/    服务器地址、TTS、听读默认项
 data/
   db/          Room：materials / segments / units / practice_records / issues / vocab
-  local/       内置资源加载、TXT 导入、本地切句、最小对立词表、本机练习生成器
+  local/       内置资源加载、TXT 导入、本地切句、最小对立词表、本机练习生成器、离线词典
   remote/      EchoServerApi + DTO（speecheval 已有端点 + Echo_player 流水线契约）
-  repo/        Material / Practice / PracticeSet / Issue / Vocab 五个仓库，UI 只和它们说话
+  repo/        Material / Practice / PracticeSet / Issue / Vocab / Chat 六个仓库，UI 只和它们说话
 audio/         TtsEngine（本机朗读）、WavRecorder（16k 单声道 WAV）、ClipPlayer（回放录音 / 片段 / 服务器语音）
 ```
 
@@ -32,6 +32,7 @@ audio/         TtsEngine（本机朗读）、WavRecorder（16k 单声道 WAV）�
 | 录音跟读 + 评分 | `PracticeRecordEntity` | 保存完整 `AssessResult` JSON 与录音路径，可回放任意一次 |
 | 问题定位（五层） | `IssueEntity` | `layer` 1~5、**词范围 `spanStart/spanEnd/spanText`**、**细分类型 `subtypes`**、**程度 `severity`**、`misheardAs`、上下文快照、疑问 `note`、Agent 讲解 `explanation`、是否已解决 |
 | 针对性练习 | `PracticeSetEntity` | 一组题（`itemsJson`）、来源（server/local）、进度与对错 |
+| 对话式教学 / 记录疑问 | `ChatMessageEntity` | 挂在句子上的一问一答，`fromServer` 标记是 AI 还是离线兜底 |
 | 记录 → 复习 | `VocabEntity` + 上面两张表 | 生词带原句与译文；复习按熟悉度和上次复习时间排序 |
 
 ## 句子的渲染与手势
@@ -51,6 +52,21 @@ audio/         TtsEngine（本机朗读）、WavRecorder（16k 单声道 WAV）�
 早先用 `detectTapGestures` + `detectDragGesturesAfterLongPress` 两个检测器，
 再给每个词套 `combinedClickable`，有两个问题：子组件的长按会把父层的长按拖动吃掉（划不动），
 长按选中后抬手还会补一次 tap 把选区清掉；几十个可点击组件的涟漪与语义节点也拖慢了滑动。
+
+## 离线词典
+
+`assets/dict/ecdict.db`（5.3 MB，73k 条）由 `tools/build_dictionary.py` 从 ECDICT 筛选：Oxford 3000、
+Collins 星级、语料前 3 万、中高考四六级考研托福雅思 GRE 词表，加上它们的全部屈折形式（`lemma` 指回原形），
+再加上内置素材里出现的每个词。`OfflineDictionary` 第一次用时把它复制到私有目录，裸 SQLite 只读打开。
+
+点词的释义顺序：内置词典 → 生词本里自己记的 → 服务器 `/translate`。
+`rank` 是词频名次，超过 2500（或未知）的算难词，用来生成「本句词汇」。
+
+## 听读页的主区域
+
+从上到下：上文 → 当前句 → 提示 / 选区栏 → 点词卡片 → 译文 → **本句词汇**（词典挑出的难词，点即查）
+→ 问题标签 → 评分结果 → **问 AI**（快捷问题、输入框、这句上的问答记录）。
+盲听时"本句词汇"和译文都不显示，免得剧透。
 
 ## 播放链路
 

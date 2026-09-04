@@ -201,6 +201,27 @@ POST /practice/report
 
 服务器不可达时客户端退回离线讲解模板（层的定义、典型表现、可做的动作），并把问题记录留在本地，接入后可补讲解。
 
+### 2.8 听读页问答（教学 Agent 对话）
+
+听读页里的「问 AI」。客户端把当前句、前两句、译文、问题和这句上的历史问答一起发过去。
+
+```
+POST /chat
+{
+  "unit_text": "The harder he blew, the tighter the traveler held his cloak around him.",
+  "context": ["…前两句…"],
+  "translation": "…",
+  "question": "the harder ... the tighter 是什么结构？",
+  "history": [ { "role": "user", "text": "…" }, { "role": "assistant", "text": "…" } ],
+  "material_title": "The North Wind and the Sun",
+  "language": "en"
+}
+→ { "answer": "这是 'the + 比较级, the + 比较级' 结构……", "suggestions": ["再举两个例句", "这里的 held 为什么用过去式"] }
+```
+
+服务器不可用时客户端用本机规则回答：某个词的释义与音标（内置词典）、整句逐词音标、
+本句难词、整句译文；其余问题明确告知需要服务器。问答都存在本地 `chat_messages` 表里。
+
 ## 三、错误约定
 
 - 4xx/5xx 时 body 为 `{"detail": "人类可读的原因"}`（FastAPI 默认），客户端直接把 `detail` 显示给用户。

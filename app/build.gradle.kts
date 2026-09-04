@@ -14,8 +14,8 @@ android {
         applicationId = "com.echoplayer.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.3.0"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -104,5 +104,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation("junit:junit:4.13.2")
+    // 只用于单元测试里直接打开 assets/dict/ecdict.db 做内容校验
+    testImplementation("org.xerial:sqlite-jdbc:3.46.1.3")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }

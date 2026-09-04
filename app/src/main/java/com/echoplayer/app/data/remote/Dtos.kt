@@ -285,3 +285,25 @@ object PracticeTypes {
         else -> type
     }
 }
+
+
+// ---------------------------------------------------------------------------
+// 听读页里的 AI 问答（契约见 docs/SERVER_API.md §2.8）
+// ---------------------------------------------------------------------------
+
+@Serializable
+data class ChatTurn(val role: String, val text: String)
+
+@Serializable
+data class ChatRequest(
+    val unit_text: String,
+    val context: List<String> = emptyList(),
+    val translation: String? = null,
+    val question: String,
+    val history: List<ChatTurn> = emptyList(),
+    val material_title: String? = null,
+    val language: String = "en",
+)
+
+@Serializable
+data class ChatResponse(val answer: String, val suggestions: List<String> = emptyList())

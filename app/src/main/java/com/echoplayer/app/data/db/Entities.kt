@@ -178,3 +178,25 @@ data class VocabEntity(
     val lastReviewedAt: Long? = null,
     val addedAt: Long,
 )
+
+
+/**
+ * 听读页里和 AI 的问答（Echo_player 第四、五部分：对话式教学 + 记录疑问）。
+ * 每条挂在具体的句子上，也是以后生成复习计划的原料。
+ */
+@Entity(
+    tableName = "chat_messages",
+    foreignKeys = [ForeignKey(UnitEntity::class, ["id"], ["unitId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("unitId"), Index("createdAt")],
+)
+data class ChatMessageEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val unitId: String,
+    val materialId: String,
+    /** user | assistant */
+    val role: String,
+    val text: String,
+    val createdAt: Long,
+    /** 回答是否来自服务器（否则是离线兜底） */
+    val fromServer: Boolean = false,
+)

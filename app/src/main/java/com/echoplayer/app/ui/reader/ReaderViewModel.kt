@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.echoplayer.app.EchoApp
 import com.echoplayer.app.audio.TtsEngine
 import com.echoplayer.app.data.Settings
+import com.echoplayer.app.data.db.ChatMessageEntity
 import com.echoplayer.app.data.db.IssueEntity
 import com.echoplayer.app.data.db.MaterialEntity
 import com.echoplayer.app.data.db.PracticeRecordEntity
@@ -16,6 +17,7 @@ import com.echoplayer.app.data.remote.AssessResult
 import com.echoplayer.app.data.remote.ExplainResponse
 import com.echoplayer.app.data.remote.ServerException
 import com.echoplayer.app.data.remote.WordResult
+import com.echoplayer.app.data.repo.GlossItem
 import com.echoplayer.app.data.repo.IssueRepository
 import com.echoplayer.app.data.repo.VocabRepository
 import com.echoplayer.app.util.Words
@@ -58,6 +60,9 @@ data class ReaderUiState(
     val wordCard: WordCardState? = null,
     /** 盲听模式下已经揭开的词。 */
     val revealedWords: Set<Int> = emptySet(),
+    /** 本句里的难词（离线词典挑出来的）。 */
+    val gloss: List<GlossItem> = emptyList(),
+    val chatBusy: Boolean = false,
     val message: String? = null,
     val ttsState: TtsEngine.State = TtsEngine.State.INIT,
     val serverConfigured: Boolean = false,
@@ -85,6 +90,7 @@ data class WordCardState(
     val index: Int,
     val word: String,
     val translation: String? = null,
+    val phonetic: String? = null,
     val loading: Boolean = false,
     val hint: String? = null,
 )
@@ -115,6 +121,13 @@ class ReaderViewModel(
     val unitIssues: StateFlow<List<IssueEntity>> = currentUnitId
         .flatMapLatest { id -> if (id == null) flowOf(emptyList()) else app.issues.observeForUnit(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val chatMessages: StateFlow<List<ChatMessageEntity>> = currentUnitId
+        .flatMapLatest { id -> if (id == null) flowOf(emptyList()) else app.chat.observe(id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val chatSuggestions: List<String> = app.chat.suggestions()
 
     val bestByUnit: StateFlow<Map<String, UnitBest>> = app.practice.observeBestByUnit(materialId)
         .map { list -> list.associateBy { it.unitId } }
@@ -180,13 +193,22 @@ class ReaderViewModel(
         }
     }
 
+    private var glossJob: Job? = null
+
     private fun syncUnit() {
         val st = _state.value
         val unit = st.unit
         currentUnitId.value = unit?.id
         val saved = unit?.let { results[it.id] }
-        _state.update { it.copy(result = saved?.result, recordingPath = saved?.recordingPath) }
-        if (unit != null) viewModelScope.launch { app.materials.updateProgress(materialId, st.index) }
+        _state.update { it.copy(result = saved?.result, recordingPath = saved?.recordingPath, gloss = emptyList()) }
+        if (unit != null) {
+            viewModelScope.launch { app.materials.updateProgress(materialId, st.index) }
+            glossJob?.cancel()
+            glossJob = viewModelScope.launch {
+                val items = runCatching { app.chat.hardWords(unit) }.getOrDefault(emptyList())
+                _state.update { cur -> if (cur.unit?.id == unit.id) cur.copy(gloss = items) else cur }
+            }
+        }
     }
 
     // ---- 导航 -----------------------------------------------------------------
@@ -233,12 +255,23 @@ class ReaderViewModel(
             else st.copy(wordCard = st.wordCard.copy(translation = translation, loading = false, hint = hint))
         }
         wordTranslations[key]?.let { publish(it, null); return }
+        // ① 离线词典（随 APK 内置）
+        app.dictionary.lookup(key)?.let { lk ->
+            _state.update { st ->
+                if (st.wordCard?.index != index) st
+                else st.copy(wordCard = st.wordCard.copy(translation = lk.translation, phonetic = lk.phonetic, loading = false, hint = null))
+            }
+            wordTranslations[key] = lk.translation
+            return
+        }
+        // ② 生词本里自己记的
         app.vocab.translationOf(key)?.takeIf { it.isNotBlank() }?.let {
             wordTranslations[key] = it
             publish(it, null); return
         }
+        // ③ 服务器
         if (!app.api.isConfigured) {
-            publish(null, "配置服务器后可以自动查词；也可以点放大镜打开词典")
+            publish(null, "内置词典里没有这个词；点放大镜可以打开在线词典")
             return
         }
         runCatching { app.materials.translateText(key) }
@@ -254,6 +287,14 @@ class ReaderViewModel(
     fun revealAll() = _state.update { it.copy(textRevealed = true) }
 
     fun setSelection(span: WordSpan?) = _state.update { it.copy(selection = span) }
+
+    /** 划选片段的显示文字：盲听时被盖住的词不能露出来，只报个数。 */
+    fun selectionLabel(): String? {
+        val st = _state.value
+        val span = st.selection ?: return null
+        val hidden = (span.start..span.end).any { it in st.maskedWords }
+        return if (hidden) "${span.size} 个词（盲听中，不显示原文）" else selectionText()
+    }
 
     /** 划选片段的原文。 */
     fun selectionText(): String? {
@@ -597,6 +638,25 @@ class ReaderViewModel(
         sb.append("\n这条记录已经足够精确，去「练习」页就能据此出题；接入教学服务器后，这里会由 AI 给出针对性的讲解、例句和小测验。")
         val examples = unit?.let { listOf(it.text) }.orEmpty()
         return ExplainResponse(explanation = sb.toString(), examples = examples)
+    }
+
+    // ---- 问 AI ----------------------------------------------------------------------
+
+    fun askAi(question: String) {
+        val st = _state.value
+        val unit = st.unit ?: return
+        if (question.isBlank() || st.chatBusy) return
+        _state.update { it.copy(chatBusy = true) }
+        viewModelScope.launch {
+            runCatching { app.chat.ask(unit, st.context.map { it.text }, st.material?.title, question) }
+                .onFailure { e -> _state.update { it.copy(message = "提问失败：${e.message}") } }
+            _state.update { it.copy(chatBusy = false) }
+        }
+    }
+
+    fun clearChat() {
+        val unit = _state.value.unit ?: return
+        viewModelScope.launch { app.chat.clear(unit.id) }
     }
 
     fun consumeMessage() = _state.update { it.copy(message = null) }

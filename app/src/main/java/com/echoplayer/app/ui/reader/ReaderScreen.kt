@@ -101,6 +101,7 @@ fun ReaderScreen(
     val openIssues by vm.openIssuesByUnit.collectAsStateWithLifecycle()
     val vocab by vm.vocabWords.collectAsStateWithLifecycle()
     val level by vm.recordingLevel.collectAsStateWithLifecycle()
+    val chat by vm.chatMessages.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -197,6 +198,7 @@ fun ReaderScreen(
                         WordCard(
                             word = card.word,
                             translation = card.translation,
+                            phonetic = card.phonetic,
                             loading = card.loading,
                             hint = card.hint,
                             inVocab = Words.normalize(card.word) in vocab,
@@ -207,7 +209,7 @@ fun ReaderScreen(
                     }
                     if (st.selection != null) {
                         SelectionBar(
-                            text = vm.selectionText().orEmpty(),
+                            text = vm.selectionLabel().orEmpty(),
                             onPlay = { vm.playSelection() },
                             onClear = { vm.setSelection(null) },
                         )
@@ -240,6 +242,9 @@ fun ReaderScreen(
                                 Text(if (st.serverConfigured) "翻译这一句" else "这一句还没有翻译")
                             }
                         }
+                    }
+                    if (st.maskedWords.isEmpty()) {
+                        SentenceGlossRow(items = st.gloss, onTap = { vm.tapWord(it) })
                     }
                     if (unitIssues.isNotEmpty()) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -275,6 +280,14 @@ fun ReaderScreen(
                             Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(4.dp)); Text("听我的录音")
                         }
                     }
+                    AiPanel(
+                        messages = chat,
+                        suggestions = vm.chatSuggestions,
+                        busy = st.chatBusy,
+                        serverConfigured = st.serverConfigured,
+                        onAsk = { vm.askAi(it) },
+                        onClear = { vm.clearChat() },
+                    )
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -322,7 +335,7 @@ fun ReaderScreen(
                         }
                     }
                     Text(
-                        st.selection?.let { "「${vm.selectionText()}」是哪一层的问题？" } ?: "哪里没听懂？",
+                        st.selection?.let { "「${vm.selectionLabel()}」是哪一层的问题？" } ?: "哪里没听懂？",
                         style = MaterialTheme.typography.labelMedium,
                         color = if (st.selection != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -349,6 +362,7 @@ fun ReaderScreen(
                 layer = layer,
                 sentence = unit.text,
                 initialSpan = st.selection,
+                maskedWords = st.maskedWords,
                 serverConfigured = st.serverConfigured,
                 onAction = { handleAction(it) },
                 onRecord = { draft -> vm.recordIssue(draft)?.id },
