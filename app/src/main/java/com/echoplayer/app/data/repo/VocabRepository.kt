@@ -13,6 +13,9 @@ class VocabRepository(private val dao: VocabDao) {
 
     suspend fun contains(word: String) = dao.byWord(normalize(word)) != null
 
+    /** 生词本里已经记过的释义，点词时优先用它。 */
+    suspend fun translationOf(word: String): String? = dao.byWord(normalize(word))?.translation
+
     suspend fun add(word: String, unit: UnitEntity?, materialTitle: String?, translation: String? = null): VocabEntity? {
         val key = normalize(word)
         if (key.isEmpty()) return null

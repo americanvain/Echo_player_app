@@ -29,23 +29,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.BookmarkAdd
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.PlaylistPlay
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -95,7 +92,6 @@ fun ReaderScreen(
     initialUnitIndex: Int?,
     initialUnitId: String?,
     onBack: () -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     val vm = echoViewModel(key = "reader-$materialId") { ReaderViewModel(it, materialId, initialUnitIndex, initialUnitId) }
     val st by vm.state.collectAsStateWithLifecycle()
@@ -110,8 +106,6 @@ fun ReaderScreen(
     val snackbar = remember { SnackbarHostState() }
 
     var showList by remember { mutableStateOf(false) }
-    var menu by remember { mutableStateOf(false) }
-    var wordSheet by remember { mutableStateOf<Pair<String, com.echoplayer.app.data.remote.WordResult?>?>(null) }
     var layerSheet by remember { mutableStateOf<ProblemLayer?>(null) }
 
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -131,14 +125,14 @@ fun ReaderScreen(
             LayerAction.SLOW_REPLAY -> { layerSheet = null; if (st.selection != null) vm.playSelection() else vm.playSlow() }
             LayerAction.WORD_BY_WORD -> { layerSheet = null; vm.playWordByWord() }
             LayerAction.SHADOW_SCORE -> { layerSheet = null; startRecording() }
-            LayerAction.REVEAL_TEXT -> { layerSheet = null; vm.reveal() }
+            LayerAction.REVEAL_TEXT -> { layerSheet = null; vm.revealAll() }
             LayerAction.ADD_VOCAB, LayerAction.LOOKUP_WORD -> {
-                layerSheet = null; vm.reveal()
+                layerSheet = null; vm.revealAll()
                 if (st.selection != null) vm.addSelectionToVocab()
-                else scope.launch { snackbar.showSnackbar("点句子里的单词即可查词 / 加入生词本") }
+                else scope.launch { snackbar.showSnackbar("点句子里的单词就能看释义、加生词") }
             }
             LayerAction.SHOW_TRANSLATION -> {
-                layerSheet = null; vm.reveal()
+                layerSheet = null; vm.revealAll()
                 if (!st.showTranslation) vm.toggleTranslation()
                 vm.translateCurrent()
             }
@@ -153,22 +147,21 @@ fun ReaderScreen(
                 title = {
                     Column {
                         Text(st.material?.title ?: "", style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (st.units.isNotEmpty()) Text("第 ${st.index + 1} / ${st.units.size} 句", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (st.units.isNotEmpty()) {
+                            Text("第 ${st.index + 1} / ${st.units.size} 句", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
                 actions = {
-                    IconButton(onClick = { showList = true }) { Icon(Icons.AutoMirrored.Filled.List, "目录") }
-                    Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "更多") }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            MenuToggle("盲听模式（先听后看）", st.blindMode) { vm.toggleBlindMode(); menu = false }
-                            MenuToggle("显示翻译", st.showTranslation) { vm.toggleTranslation(); menu = false }
-                            MenuToggle("自动连播", st.autoAdvance) { vm.toggleAutoAdvance(); menu = false }
-                            MenuToggle("单句循环", st.loop) { vm.toggleLoop(); menu = false }
-                            DropdownMenuItem(text = { Text("设置") }, onClick = { menu = false; onOpenSettings() })
-                        }
+                    IconButton(onClick = { vm.toggleBlindMode() }) {
+                        Icon(
+                            if (st.blindMode) Icons.Filled.VisibilityOff else Icons.Outlined.Visibility,
+                            if (st.blindMode) "关闭盲听模式" else "盲听模式：先盖住单词",
+                            tint = if (st.blindMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
+                    IconButton(onClick = { showList = true }) { Icon(Icons.AutoMirrored.Filled.List, "目录") }
                 },
             )
         },
@@ -181,49 +174,70 @@ fun ReaderScreen(
             )
             val unit = st.unit
             Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 if (unit == null) {
                     Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else {
-                    ContextLines(st.context.map { it.text })
-                    if (st.blindMode && !st.textRevealed) {
-                        HiddenSentence(onReveal = { vm.reveal() })
-                    } else {
-                        SentenceView(
-                            text = unit.text,
-                            words = st.result?.words,
-                            vocab = vocab,
-                            selection = st.selection,
-                            onWordTap = { w, _, scored -> wordSheet = w to scored },
-                            onSelectionChange = { vm.setSelection(it) },
+                    ContextLines(
+                        lines = st.context.map { it.text },
+                        onJump = { i -> vm.jumpTo(st.index - st.context.size + i) },
+                    )
+                    SentenceView(
+                        text = unit.text,
+                        words = st.result?.words,
+                        vocab = vocab,
+                        selection = st.selection,
+                        maskedWords = st.maskedWords,
+                        onWordTap = { vm.tapWord(it) },
+                        onSelectionChange = { vm.setSelection(it) },
+                    )
+                    st.wordCard?.let { card ->
+                        WordCard(
+                            word = card.word,
+                            translation = card.translation,
+                            loading = card.loading,
+                            hint = card.hint,
+                            inVocab = Words.normalize(card.word) in vocab,
+                            onSpeak = { vm.speakWord(card.word) },
+                            onToggleVocab = { vm.toggleVocab(card.word) },
+                            onDismiss = { vm.dismissWordCard() },
                         )
-                        if (st.selection != null) {
-                            SelectionBar(
-                                text = vm.selectionText().orEmpty(),
-                                onPlay = { vm.playSelection() },
-                                onAddVocab = { vm.addSelectionToVocab() },
-                                onClear = { vm.setSelection(null) },
-                            )
-                        } else {
+                    }
+                    if (st.selection != null) {
+                        SelectionBar(
+                            text = vm.selectionText().orEmpty(),
+                            onPlay = { vm.playSelection() },
+                            onClear = { vm.setSelection(null) },
+                        )
+                    } else if (st.maskedWords.isNotEmpty()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "长按并划过句子，可以选出没听懂的那一段",
+                                "盲听中：点一个词揭开它",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
                             )
+                            TextButton(onClick = { vm.revealAll() }) { Text("全部显示") }
                         }
+                    } else {
+                        Text(
+                            "点词看释义，长按划过可以选出没听懂的一段",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
-                    if (st.showTranslation && st.textRevealed) {
+                    if (st.translationVisible) {
                         val t = unit.translation
                         if (!t.isNullOrBlank()) {
                             Text(t, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
-                            TextButton(onClick = { vm.translateCurrent() }, enabled = !st.translating) {
+                            TextButton(onClick = { vm.translateCurrent() }, enabled = !st.translating, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
                                 if (st.translating) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
                                 else Icon(Icons.Default.Translate, null, Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(if (st.serverConfigured) "在线翻译这一句" else "这一句还没有翻译")
+                                Text(if (st.serverConfigured) "翻译这一句" else "这一句还没有翻译")
                             }
                         }
                     }
@@ -232,7 +246,7 @@ fun ReaderScreen(
                             unitIssues.forEach { i ->
                                 val layer = ProblemLayer.fromId(i.layer)
                                 Tag(
-                                    (if (i.resolved) "✓ " else "") + layer.shortLabel + (i.note?.let { "：" + it.take(12) } ?: ""),
+                                    (if (i.resolved) "✓ " else "") + layer.shortLabel + (i.spanText?.let { "：$it" } ?: ""),
                                     color = EchoColors.layer(layer.id),
                                 )
                             }
@@ -268,7 +282,6 @@ fun ReaderScreen(
             // ---------------- 底部控制区 ----------------
             Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // 播放行
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         RateChip(st.rate) { vm.setRate(nextRate(st.rate)) }
                         Spacer(Modifier.weight(1f))
@@ -282,6 +295,9 @@ fun ReaderScreen(
                         }
                         IconButton(onClick = { vm.next() }, enabled = st.hasNext) { Icon(Icons.Default.SkipNext, "下一句") }
                         Spacer(Modifier.weight(1f))
+                        IconButton(onClick = { vm.toggleTranslation() }) {
+                            Icon(Icons.Default.Translate, "显示翻译", tint = if (st.showTranslation) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         IconButton(onClick = { vm.toggleLoop() }) {
                             Icon(Icons.Default.Repeat, "单句循环", tint = if (st.loop) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -289,7 +305,6 @@ fun ReaderScreen(
                             Icon(Icons.Outlined.PlaylistPlay, "自动连播", tint = if (st.autoAdvance) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    // 跟读行
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         RecordButton(
                             recording = st.recording,
@@ -306,7 +321,6 @@ fun ReaderScreen(
                             Icon(Icons.Default.VolumeUp, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("原音", maxLines = 1)
                         }
                     }
-                    // 问题定位行
                     Text(
                         st.selection?.let { "「${vm.selectionText()}」是哪一层的问题？" } ?: "哪里没听懂？",
                         style = MaterialTheme.typography.labelMedium,
@@ -328,17 +342,6 @@ fun ReaderScreen(
     if (showList) {
         UnitListSheet(units = st.units, current = st.index, best = best, openIssues = openIssues, onJump = { vm.jumpTo(it) }, onDismiss = { showList = false })
     }
-    wordSheet?.let { (w, scored) ->
-        WordSheet(
-            word = w,
-            inVocab = Words.normalize(w) in vocab,
-            onSpeak = { vm.speakWord(w) },
-            onToggleVocab = { vm.toggleVocab(w) },
-            onDismiss = { wordSheet = null },
-            scored = scored,
-            onPlayMine = scored?.let { sw -> { vm.playWordClip(sw) } },
-        )
-    }
     layerSheet?.let { layer ->
         val unit = st.unit
         if (unit != null) {
@@ -357,12 +360,12 @@ fun ReaderScreen(
 }
 
 @Composable
-private fun SelectionBar(text: String, onPlay: () -> Unit, onAddVocab: () -> Unit, onClear: () -> Unit) {
+private fun SelectionBar(text: String, onPlay: () -> Unit, onClear: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -373,19 +376,9 @@ private fun SelectionBar(text: String, onPlay: () -> Unit, onAddVocab: () -> Uni
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = onPlay) { Icon(Icons.Default.VolumeUp, "只听这一段", Modifier.size(18.dp)) }
-        IconButton(onClick = onAddVocab) { Icon(Icons.Default.BookmarkAdd, "加入生词本", Modifier.size(18.dp)) }
-        IconButton(onClick = onClear) { Icon(Icons.Default.Close, "取消选择", Modifier.size(18.dp)) }
+        IconButton(onClick = onPlay, modifier = Modifier.size(34.dp)) { Icon(Icons.Default.VolumeUp, "只听这一段", Modifier.size(18.dp)) }
+        IconButton(onClick = onClear, modifier = Modifier.size(34.dp)) { Icon(Icons.Default.Close, "取消选择", Modifier.size(18.dp)) }
     }
-}
-
-@Composable
-private fun MenuToggle(label: String, checked: Boolean, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = { Text(label) },
-        trailingIcon = { if (checked) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary) },
-        onClick = onClick,
-    )
 }
 
 private fun nextRate(r: Float): Float {

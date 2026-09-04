@@ -150,7 +150,6 @@ fun EchoNavHost(incoming: IncomingFile?, onIncomingConsumed: () -> Unit) {
                     initialUnitIndex = (entry.arguments?.getInt("unit") ?: -1).takeIf { it >= 0 },
                     initialUnitId = entry.arguments?.getString("unitId"),
                     onBack = { nav.popBackStack() },
-                    onOpenSettings = { nav.navigate(Routes.SETTINGS) },
                 )
             }
             composable(

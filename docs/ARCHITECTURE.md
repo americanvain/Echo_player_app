@@ -34,6 +34,24 @@ audio/         TtsEngine（本机朗读）、WavRecorder（16k 单声道 WAV）�
 | 针对性练习 | `PracticeSetEntity` | 一组题（`itemsJson`）、来源（server/local）、进度与对错 |
 | 记录 → 复习 | `VocabEntity` + 上面两张表 | 生词带原句与译文；复习按熟悉度和上次复习时间排序 |
 
+## 句子的渲染与手势
+
+整句是**一个** `Text`，词的颜色、底色、下划线用 `AnnotatedString` 的 span 表示；命中测试走
+`TextLayoutResult.getOffsetForPosition` → 字符偏移 → 词索引（`Words.charRanges` / `Words.wordIndexAt`）。
+盲听时未揭开的词用 `drawWithContent` 在词的包围盒上盖色块，文字仍参与排版所以位置不跳。
+
+手势只有一处 `pointerInput`，在 `awaitEachGesture` 里自己分三种情况：
+
+| 情况 | 判据 | 行为 |
+|---|---|---|
+| 点击 | 长按超时前抬手 | 盲听时揭开这一个词；否则展开释义小卡片 |
+| 长按划选 | 到长按超时仍未抬手、未超过 touch slop | 进入 `drag`，消费事件，实时更新选区 |
+| 滚动 | 超时前移动超过 touch slop | 不消费，交给父层 `verticalScroll` |
+
+早先用 `detectTapGestures` + `detectDragGesturesAfterLongPress` 两个检测器，
+再给每个词套 `combinedClickable`，有两个问题：子组件的长按会把父层的长按拖动吃掉（划不动），
+长按选中后抬手还会补一次 tap 把选区清掉；几十个可点击组件的涟漪与语义节点也拖慢了滑动。
+
 ## 播放链路
 
 `ReaderViewModel.playCurrent()`：
@@ -57,9 +75,8 @@ audio/         TtsEngine（本机朗读）、WavRecorder（16k 单声道 WAV）�
 定位必须**细到 AI 能据此出题**，所以一条记录是「句子 + 词范围 + 层 + 细分类型 + 程度 + 可选的一句话」，
 全部靠点选和划拉完成，最快两下：
 
-1. **划范围**：在句子上长按并划过（`SentenceView` 用 `detectDragGesturesAfterLongPress` +
-   每个词的 `boundsInParent` 做命中测试），选出没听懂的那几个词。也可以不划，默认整句。
-   选中后有一条操作栏：只听这一段 / 加入生词本 / 取消。
+1. **划范围**：在句子上长按并划过，选出没听懂的那几个词。也可以不划，默认整句。
+   选中后有一条操作栏：只听这一段 / 取消。
 2. **选层**：底部五个按钮之一 → `ProblemLayerSheet`，带着刚才的范围进来。
 3. **选细分类型**（每层 6~7 个，多选）+ **程度**（三档）。词形层多一个"听成了什么"输入框，
    它会直接变成练习里的干扰项。面板里还能再调范围。

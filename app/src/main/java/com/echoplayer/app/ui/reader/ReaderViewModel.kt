@@ -54,6 +54,10 @@ data class ReaderUiState(
     val translating: Boolean = false,
     /** 划拉选中的词范围；null = 没有选择。 */
     val selection: WordSpan? = null,
+    /** 点开的那个词（词索引）；null = 没有打开。 */
+    val wordCard: WordCardState? = null,
+    /** 盲听模式下已经揭开的词。 */
+    val revealedWords: Set<Int> = emptySet(),
     val message: String? = null,
     val ttsState: TtsEngine.State = TtsEngine.State.INIT,
     val serverConfigured: Boolean = false,
@@ -64,7 +68,26 @@ data class ReaderUiState(
     val hasNext: Boolean get() = index < units.size - 1
     val isPlaying: Boolean get() = playback != Playback.IDLE
     val context: List<UnitEntity> get() = if (index <= 0) emptyList() else units.subList(maxOf(0, index - 2), index)
+
+    /** 盲听模式下仍被盖住的词。整句揭开后为空。 */
+    val maskedWords: Set<Int>
+        get() {
+            if (!blindMode || textRevealed) return emptySet()
+            val n = unit?.let { Words.tokenize(it.text).size } ?: 0
+            return (0 until n).toSet() - revealedWords
+        }
+
+    /** 盲听时还没全部揭开，就先不显示译文，免得剧透。 */
+    val translationVisible: Boolean get() = showTranslation && (!blindMode || textRevealed)
 }
+
+data class WordCardState(
+    val index: Int,
+    val word: String,
+    val translation: String? = null,
+    val loading: Boolean = false,
+    val hint: String? = null,
+)
 
 /** 每句最近一次的评分结果与录音路径，切换句子再切回来还能看到。 */
 private data class UnitResult(val result: AssessResult, val recordingPath: String?)
@@ -108,6 +131,8 @@ class ReaderViewModel(
     private val results = HashMap<String, UnitResult>()
     private var wordQueue: ArrayDeque<String> = ArrayDeque()
     private var queueRate: Float = 1f
+    private val wordTranslations = HashMap<String, String>()
+    private var lookupJob: Job? = null
     private var recordingFile: File? = null
     private var recordingTimer: Job? = null
     private var initialized = false
@@ -175,11 +200,58 @@ class ReaderViewModel(
         val idx = i.coerceIn(0, st.units.size - 1)
         if (idx == st.index && st.textRevealed) return
         stopPlayback()
-        _state.update { it.copy(index = idx, textRevealed = !it.blindMode, message = null, selection = null) }
+        _state.update { it.copy(index = idx, textRevealed = !it.blindMode, message = null, selection = null, wordCard = null, revealedWords = emptySet()) }
         syncUnit()
     }
 
     fun reveal() = _state.update { it.copy(textRevealed = true) }
+
+    /** 点词：盲听时先揭开这一个词，已经看得见就展开释义卡片。 */
+    fun tapWord(index: Int) {
+        val st = _state.value
+        val unit = st.unit ?: return
+        if (index in st.maskedWords) {
+            _state.update { it.copy(revealedWords = it.revealedWords + index) }
+            return
+        }
+        val token = Words.tokenize(unit.text).getOrNull(index) ?: return
+        if (st.wordCard?.index == index) {
+            _state.update { it.copy(wordCard = null) }
+            return
+        }
+        _state.update { it.copy(wordCard = WordCardState(index = index, word = token.display, loading = true)) }
+        lookupJob?.cancel()
+        lookupJob = viewModelScope.launch { lookupWord(index, token.key.ifEmpty { token.display }) }
+    }
+
+    fun dismissWordCard() = _state.update { it.copy(wordCard = null) }
+
+    /** 释义来源：生词本里已有的 → 本次会话缓存 → 服务器 /translate。 */
+    private suspend fun lookupWord(index: Int, key: String) {
+        fun publish(translation: String?, hint: String?) = _state.update { st ->
+            if (st.wordCard?.index != index) st
+            else st.copy(wordCard = st.wordCard.copy(translation = translation, loading = false, hint = hint))
+        }
+        wordTranslations[key]?.let { publish(it, null); return }
+        app.vocab.translationOf(key)?.takeIf { it.isNotBlank() }?.let {
+            wordTranslations[key] = it
+            publish(it, null); return
+        }
+        if (!app.api.isConfigured) {
+            publish(null, "配置服务器后可以自动查词；也可以点放大镜打开词典")
+            return
+        }
+        runCatching { app.materials.translateText(key) }
+            .onSuccess { t ->
+                val clean = t.trim()
+                if (clean.isNotBlank()) wordTranslations[key] = clean
+                publish(clean.ifBlank { null }, if (clean.isBlank()) "服务器没有给出释义" else null)
+            }
+            .onFailure { publish(null, "查词失败：${it.message ?: "连不上服务器"}") }
+    }
+
+    /** 一次揭开整句。 */
+    fun revealAll() = _state.update { it.copy(textRevealed = true) }
 
     fun setSelection(span: WordSpan?) = _state.update { it.copy(selection = span) }
 
@@ -285,7 +357,7 @@ class ReaderViewModel(
                     st.autoAdvance && st.hasNext -> viewModelScope.launch {
                         delay(700)
                         if (_state.value.playback == Playback.SENTENCE) {
-                            _state.update { it.copy(index = it.index + 1, textRevealed = !it.blindMode) }
+                            _state.update { it.copy(index = it.index + 1, textRevealed = !it.blindMode, selection = null, wordCard = null, revealedWords = emptySet()) }
                             syncUnit()
                             playCurrent()
                         }
@@ -342,7 +414,7 @@ class ReaderViewModel(
 
     fun toggleBlindMode() {
         val v = !_state.value.blindMode
-        _state.update { it.copy(blindMode = v, textRevealed = !v) }
+        _state.update { it.copy(blindMode = v, textRevealed = !v, revealedWords = emptySet(), wordCard = null) }
         viewModelScope.launch { app.settings.setBlindMode(v) }
     }
 

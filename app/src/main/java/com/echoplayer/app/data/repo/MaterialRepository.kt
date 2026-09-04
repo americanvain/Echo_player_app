@@ -215,6 +215,9 @@ class MaterialRepository(
 
     // ---- 翻译 -------------------------------------------------------------------
 
+    /** 翻译任意一段文字（点词查释义用），不落库。 */
+    suspend fun translateText(text: String): String = api.translate(text).translation
+
     suspend fun translateUnit(unit: UnitEntity): String {
         val t = api.translate(unit.text).translation
         dao.updateTranslation(unit.id, t)
