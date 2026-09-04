@@ -11,10 +11,12 @@ import com.echoplayer.app.data.db.PracticeRecordEntity
 import com.echoplayer.app.data.db.UnitBest
 import com.echoplayer.app.data.db.UnitEntity
 import com.echoplayer.app.data.model.ProblemLayer
+import com.echoplayer.app.data.model.Severity
 import com.echoplayer.app.data.remote.AssessResult
 import com.echoplayer.app.data.remote.ExplainResponse
 import com.echoplayer.app.data.remote.ServerException
 import com.echoplayer.app.data.remote.WordResult
+import com.echoplayer.app.data.repo.IssueRepository
 import com.echoplayer.app.data.repo.VocabRepository
 import com.echoplayer.app.util.Words
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,6 +52,8 @@ data class ReaderUiState(
     val result: AssessResult? = null,
     val recordingPath: String? = null,
     val translating: Boolean = false,
+    /** 划拉选中的词范围；null = 没有选择。 */
+    val selection: WordSpan? = null,
     val message: String? = null,
     val ttsState: TtsEngine.State = TtsEngine.State.INIT,
     val serverConfigured: Boolean = false,
@@ -171,11 +175,40 @@ class ReaderViewModel(
         val idx = i.coerceIn(0, st.units.size - 1)
         if (idx == st.index && st.textRevealed) return
         stopPlayback()
-        _state.update { it.copy(index = idx, textRevealed = !it.blindMode, message = null) }
+        _state.update { it.copy(index = idx, textRevealed = !it.blindMode, message = null, selection = null) }
         syncUnit()
     }
 
     fun reveal() = _state.update { it.copy(textRevealed = true) }
+
+    fun setSelection(span: WordSpan?) = _state.update { it.copy(selection = span) }
+
+    /** 划选片段的原文。 */
+    fun selectionText(): String? {
+        val st = _state.value
+        val span = st.selection ?: return null
+        val unit = st.unit ?: return null
+        return Words.tokenize(unit.text).filter { it.index in span }.joinToString(" ") { it.display }
+    }
+
+    /** 只朗读划选的片段，用来反复听那一小段。 */
+    fun playSelection() {
+        val text = selectionText() ?: return
+        stopPlayback(keepState = true)
+        val id = app.tts.speak(text, (_state.value.rate * 0.8f).coerceAtLeast(0.5f))
+        if (id == null) _state.update { it.copy(message = ttsProblem()) }
+    }
+
+    /** 把划选的片段整段加入生词本（单个词就是普通生词）。 */
+    fun addSelectionToVocab() {
+        val text = selectionText() ?: return
+        val unit = _state.value.unit
+        val title = _state.value.material?.title
+        viewModelScope.launch {
+            app.vocab.add(text, unit, title)
+            _state.update { it.copy(message = "已加入生词本：$text", selection = null) }
+        }
+    }
 
     // ---- 播放 -----------------------------------------------------------------
 
@@ -450,37 +483,46 @@ class ReaderViewModel(
 
     // ---- 问题定位 ------------------------------------------------------------------
 
-    suspend fun recordIssue(layer: ProblemLayer, note: String?): IssueEntity? {
-        val unit = _state.value.unit ?: return null
-        val issue = app.issues.record(unit, layer, note)
-        _state.update { it.copy(message = "已记录：${layer.title}") }
+    suspend fun recordIssue(draft: IssueRepository.Draft): IssueEntity? {
+        val st = _state.value
+        val unit = st.unit ?: return null
+        val issue = app.issues.record(unit, st.context.map { it.text }, draft)
+        val where = draft.spanText?.let { "「$it」" } ?: "整句"
+        _state.update { it.copy(message = "已记录：${draft.layer.shortLabel} · $where") }
         return issue
     }
 
     /** 请求教学 Agent 讲解；服务器不可用时返回离线模板。返回 (讲解, 是否来自服务器)。 */
-    suspend fun explain(layer: ProblemLayer, note: String?, issueId: Long?): Pair<ExplainResponse, Boolean> {
+    suspend fun explain(draft: IssueRepository.Draft, issueId: Long?): Pair<ExplainResponse, Boolean> {
         val st = _state.value
-        val unit = st.unit ?: return offlineExplanation(layer, null, note) to false
+        val unit = st.unit ?: return offlineExplanation(draft, null) to false
         val ctx = st.context.map { it.text }
         val history = unitIssues.value.mapNotNull { it.note }
-        val remote = if (app.api.isConfigured) runCatching { app.issues.explain(unit, ctx, layer, note, history) }.getOrNull() else null
+        val remote = if (app.api.isConfigured) runCatching { app.issues.explain(unit, ctx, draft, history) }.getOrNull() else null
         if (remote != null) {
             issueId?.let { app.issues.saveExplanation(it, remote.explanation) }
             return remote to true
         }
-        return offlineExplanation(layer, unit, note) to false
+        return offlineExplanation(draft, unit) to false
     }
 
-    private fun offlineExplanation(layer: ProblemLayer, unit: UnitEntity?, note: String?): ExplainResponse {
+    private fun offlineExplanation(draft: IssueRepository.Draft, unit: UnitEntity?): ExplainResponse {
+        val layer = draft.layer
         val sb = StringBuilder()
-        sb.append("你把这一句的问题定位在「${layer.title}」。\n\n")
+        val where = draft.spanText?.let { "「$it」" } ?: "整句"
+        sb.append("你把 $where 的问题定位在「${layer.title}」")
+        val subs = draft.subtypes.mapNotNull { layer.subtype(it)?.label }
+        if (subs.isNotEmpty()) sb.append("，具体是：").append(subs.joinToString("、"))
+        Severity.fromId(draft.severity)?.let { sb.append("（").append(it.label).append("）") }
+        sb.append("。\n\n")
         sb.append("这一层在做什么：").append(layer.definition).append("\n\n")
         sb.append("典型表现：\n")
         layer.symptoms.forEach { sb.append("• ").append(it).append('\n') }
         sb.append("\n现在可以做的：\n")
         layer.actions.forEach { sb.append("• ").append(it.label).append("：").append(it.description).append('\n') }
-        if (!note.isNullOrBlank()) sb.append("\n你的疑问已记录：").append(note).append('\n')
-        sb.append("\n接入教学服务器后，这里会由 AI 结合这句话、上下文和你的疑问给出针对性的讲解、例句和小测验。")
+        if (!draft.misheardAs.isNullOrBlank()) sb.append("\n你听成了：").append(draft.misheardAs).append('\n')
+        if (!draft.note.isNullOrBlank()) sb.append("\n你的疑问已记录：").append(draft.note).append('\n')
+        sb.append("\n这条记录已经足够精确，去「练习」页就能据此出题；接入教学服务器后，这里会由 AI 给出针对性的讲解、例句和小测验。")
         val examples = unit?.let { listOf(it.text) }.orEmpty()
         return ExplainResponse(explanation = sb.toString(), examples = examples)
     }

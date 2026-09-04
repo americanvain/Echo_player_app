@@ -37,6 +37,9 @@ class PracticeRepository(private val dao: PracticeDao, private val api: EchoServ
         return record.copy(id = id) to result
     }
 
+    /** 练习里的跟读题：只要分数，不落库（练习结果由 PracticeSetRepository 记）。 */
+    suspend fun assessText(text: String, wav: File): AssessResult = api.assess(wav, text)
+
     fun decode(record: PracticeRecordEntity): AssessResult? =
         runCatching { json.decodeFromString(AssessResult.serializer(), record.resultJson) }.getOrNull()
 

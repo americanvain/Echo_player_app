@@ -29,7 +29,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
@@ -126,13 +128,14 @@ fun ReaderScreen(
 
     fun handleAction(a: LayerAction) {
         when (a) {
-            LayerAction.SLOW_REPLAY -> { layerSheet = null; vm.playSlow() }
+            LayerAction.SLOW_REPLAY -> { layerSheet = null; if (st.selection != null) vm.playSelection() else vm.playSlow() }
             LayerAction.WORD_BY_WORD -> { layerSheet = null; vm.playWordByWord() }
             LayerAction.SHADOW_SCORE -> { layerSheet = null; startRecording() }
             LayerAction.REVEAL_TEXT -> { layerSheet = null; vm.reveal() }
             LayerAction.ADD_VOCAB, LayerAction.LOOKUP_WORD -> {
                 layerSheet = null; vm.reveal()
-                scope.launch { snackbar.showSnackbar("点句子里的单词即可查词 / 加入生词本") }
+                if (st.selection != null) vm.addSelectionToVocab()
+                else scope.launch { snackbar.showSnackbar("点句子里的单词即可查词 / 加入生词本") }
             }
             LayerAction.SHOW_TRANSLATION -> {
                 layerSheet = null; vm.reveal()
@@ -192,9 +195,24 @@ fun ReaderScreen(
                             text = unit.text,
                             words = st.result?.words,
                             vocab = vocab,
-                            onWordTap = { w, scored -> wordSheet = w to scored },
-                            onWordLongPress = { vm.toggleVocab(it) },
+                            selection = st.selection,
+                            onWordTap = { w, _, scored -> wordSheet = w to scored },
+                            onSelectionChange = { vm.setSelection(it) },
                         )
+                        if (st.selection != null) {
+                            SelectionBar(
+                                text = vm.selectionText().orEmpty(),
+                                onPlay = { vm.playSelection() },
+                                onAddVocab = { vm.addSelectionToVocab() },
+                                onClear = { vm.setSelection(null) },
+                            )
+                        } else {
+                            Text(
+                                "长按并划过句子，可以选出没听懂的那一段",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     if (st.showTranslation && st.textRevealed) {
                         val t = unit.translation
@@ -289,7 +307,14 @@ fun ReaderScreen(
                         }
                     }
                     // 问题定位行
-                    Text("哪里没听懂？", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+                    Text(
+                        st.selection?.let { "「${vm.selectionText()}」是哪一层的问题？" } ?: "哪里没听懂？",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (st.selection != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                         ProblemLayer.entries.forEach { layer ->
                             LayerButton(layer, enabled = unit != null, modifier = Modifier.weight(1f)) { layerSheet = layer }
@@ -320,13 +345,37 @@ fun ReaderScreen(
             ProblemLayerSheet(
                 layer = layer,
                 sentence = unit.text,
+                initialSpan = st.selection,
                 serverConfigured = st.serverConfigured,
                 onAction = { handleAction(it) },
-                onRecord = { note -> vm.recordIssue(layer, note)?.id },
-                onExplain = { note, id -> vm.explain(layer, note, id) },
-                onDismiss = { layerSheet = null },
+                onRecord = { draft -> vm.recordIssue(draft)?.id },
+                onExplain = { draft, id -> vm.explain(draft, id) },
+                onDismiss = { layerSheet = null; vm.setSelection(null) },
             )
         }
+    }
+}
+
+@Composable
+private fun SelectionBar(text: String, onPlay: () -> Unit, onAddVocab: () -> Unit, onClear: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "已选：$text",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onPlay) { Icon(Icons.Default.VolumeUp, "只听这一段", Modifier.size(18.dp)) }
+        IconButton(onClick = onAddVocab) { Icon(Icons.Default.BookmarkAdd, "加入生词本", Modifier.size(18.dp)) }
+        IconButton(onClick = onClear) { Icon(Icons.Default.Close, "取消选择", Modifier.size(18.dp)) }
     }
 }
 

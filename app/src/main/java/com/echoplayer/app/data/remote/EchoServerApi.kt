@@ -84,6 +84,10 @@ class EchoServerApi(private val baseUrlProvider: () -> String) {
 
     suspend fun explain(request: ExplainRequest): ExplainResponse = post("/issues/explain", request)
 
+    suspend fun generatePractice(request: GeneratePracticeRequest): GeneratePracticeResponse = post("/practice/generate", request)
+
+    suspend fun reportPractice(request: PracticeReportRequest) { post<PracticeReportRequest, kotlinx.serialization.json.JsonObject>("/practice/report", request) }
+
     // ---- helpers -------------------------------------------------------------
 
     private suspend inline fun <reified T> get(path: String): T = withContext(Dispatchers.IO) {

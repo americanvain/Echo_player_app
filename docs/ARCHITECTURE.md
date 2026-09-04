@@ -7,15 +7,16 @@
 ```
 ui/            Jetpack Compose 页面 + ViewModel（每个页面一个 VM，只依赖 EchoApp 容器）
   library/     书架：内置资源、导入 TXT/PDF/粘贴、进度、删除、轮询服务器状态
-  reader/      听读 + 跟读页：上下文 → 当前句 → 翻译 → 评分结果；底部播放 / 跟读 / 五层定位
-  vocab/       生词本：搜索、熟悉度、笔记、复习卡片
-  history/     记录：问题时间线（按层筛选、已解决）、跟读评分时间线、五层分布
+  reader/      听读 + 跟读页：上下文 → 当前句 → 翻译 → 评分结果；划选定位、底部播放 / 跟读 / 五层按钮
+  practice/    练习区：把记录生成练习集（服务器 AI 或本机规则），以及八种题型的答题器
+  history/     记录：问题 / 生词 / 跟读评分三个标签页 + 五层分布
+  vocab/       生词本面板（嵌在记录页里，不单独占导航位）
   settings/    服务器地址、TTS、听读默认项
 data/
   db/          Room：materials / segments / units / practice_records / issues / vocab
-  local/       内置资源加载、TXT 导入、本地切句（离线兜底）
+  local/       内置资源加载、TXT 导入、本地切句、最小对立词表、本机练习生成器
   remote/      EchoServerApi + DTO（speecheval 已有端点 + Echo_player 流水线契约）
-  repo/        Material / Practice / Issue / Vocab 四个仓库，UI 只和它们说话
+  repo/        Material / Practice / PracticeSet / Issue / Vocab 五个仓库，UI 只和它们说话
 audio/         TtsEngine（本机朗读）、WavRecorder（16k 单声道 WAV）、ClipPlayer（回放录音 / 片段 / 服务器语音）
 ```
 
@@ -29,7 +30,8 @@ audio/         TtsEngine（本机朗读）、WavRecorder（16k 单声道 WAV）�
 | TextSegment | `SegmentEntity` | `segmentIndex` 严格递增；本地导入时一个自然段一个 segment |
 | UtteranceUnit | `UnitEntity` | `text` / `translation` / `sourceRef` / `audioPath` / `audioDuration`；`audioPath` 为空时用本机 TTS |
 | 录音跟读 + 评分 | `PracticeRecordEntity` | 保存完整 `AssessResult` JSON 与录音路径，可回放任意一次 |
-| 问题定位（五层） | `IssueEntity` | `layer` 1~5、用户疑问 `note`、Agent 讲解 `explanation`、是否已解决 |
+| 问题定位（五层） | `IssueEntity` | `layer` 1~5、**词范围 `spanStart/spanEnd/spanText`**、**细分类型 `subtypes`**、**程度 `severity`**、`misheardAs`、上下文快照、疑问 `note`、Agent 讲解 `explanation`、是否已解决 |
+| 针对性练习 | `PracticeSetEntity` | 一组题（`itemsJson`）、来源（server/local）、进度与对错 |
 | 记录 → 复习 | `VocabEntity` + 上面两张表 | 生词带原句与译文；复习按熟悉度和上次复习时间排序 |
 
 ## 播放链路
@@ -52,13 +54,32 @@ audio/         TtsEngine（本机朗读）、WavRecorder（16k 单声道 WAV）�
 
 ## 问题定位链路（最重要）
 
-跟读页底部五个按钮 → `ProblemLayerSheet`：
-1. 展示该层的定义、典型表现（来自 Echo_player `design.md` / `classification.md`）；
-2. 「现在可以做的」动作直接驱动播放器：慢速重听、逐词播放、跟读评分、显示原文、查看翻译、联系上下文连读、查词 / 加生词；
-3. 用户写疑问 → 「记录这个问题」→ `IssueEntity`；
-4. 「AI 讲解」→ `POST /issues/explain`（句子 + 上下文 + 层 + 疑问 + 历史）；服务器不可用时退回离线模板。
+定位必须**细到 AI 能据此出题**，所以一条记录是「句子 + 词范围 + 层 + 细分类型 + 程度 + 可选的一句话」，
+全部靠点选和划拉完成，最快两下：
 
-「记录」页把问题按层统计成分布图，是 Echo_player 第五部分"用于给大模型输入、生成复习方案"的原料。
+1. **划范围**：在句子上长按并划过（`SentenceView` 用 `detectDragGesturesAfterLongPress` +
+   每个词的 `boundsInParent` 做命中测试），选出没听懂的那几个词。也可以不划，默认整句。
+   选中后有一条操作栏：只听这一段 / 加入生词本 / 取消。
+2. **选层**：底部五个按钮之一 → `ProblemLayerSheet`，带着刚才的范围进来。
+3. **选细分类型**（每层 6~7 个，多选）+ **程度**（三档）。词形层多一个"听成了什么"输入框，
+   它会直接变成练习里的干扰项。面板里还能再调范围。
+4. 「记录」→ `IssueEntity`；「AI 讲解」→ `POST /issues/explain`，服务器不可用时退回离线模板。
+
+细分类型定义在 `ProblemLayer.kt`，每个都带一句英文 `promptEn`，原样发给服务器，
+决定了 AI 能生成什么样的语料。
+
+## 练习链路
+
+「练习」页 → `PracticeSetRepository.generate()`：
+
+1. 收集未解决的问题记录、待复习的生词、最近的跟读评分；
+2. 配置了服务器就 `POST /practice/generate`，由 AI 分析原因并生成语料；
+3. 否则用 `LocalPracticeGenerator` 按规则出题，结构与服务器返回的完全一致；
+4. 落库为 `PracticeSetEntity`，在练习区列表里显示进度。
+
+`PracticeSessionScreen` 是八种题型的答题器（闪卡、选词、听写填空、句子重组、辨音、跟读、
+选译文、讲解），跟读题复用 `/assess`。一组做完后，**答对的题所关联的问题记录自动标记为已解决**，
+结果回传 `POST /practice/report` 供服务器调整下次生成。
 
 ## 后续接入点（不用改现有代码）
 

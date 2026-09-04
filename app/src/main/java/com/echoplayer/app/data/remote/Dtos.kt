@@ -124,9 +124,21 @@ data class ExplainRequest(
     val translation: String? = null,
     val layer: Int,
     val layer_name: String,
+    /** 划选的片段（词索引闭区间）；为空表示整句。 */
+    val span_text: String? = null,
+    val span_start: Int? = null,
+    val span_end: Int? = null,
+    /** 细分类型：id + 英文描述，见 ProblemLayer.subtypes。 */
+    val subtypes: List<SubtypeDto> = emptyList(),
+    val misheard_as: String? = null,
+    /** 1 看原文才懂 / 2 听出词没懂 / 3 完全没听出来 */
+    val severity: Int? = null,
     val note: String? = null,
     val history: List<String> = emptyList(),
 )
+
+@Serializable
+data class SubtypeDto(val id: String, val description: String)
 
 @Serializable
 data class ExplainResponse(
@@ -137,3 +149,139 @@ data class ExplainResponse(
 
 @Serializable
 data class QuizItem(val question: String, val answer: String, val options: List<String> = emptyList())
+
+
+// ---------------------------------------------------------------------------
+// 针对性练习（契约见 docs/SERVER_API.md §2.6）
+// ---------------------------------------------------------------------------
+
+/** 上传给服务器做分析的一条问题记录。 */
+@Serializable
+data class IssueUploadDto(
+    val id: Long,
+    val unit_text: String,
+    val context: List<String> = emptyList(),
+    val translation: String? = null,
+    val layer: Int,
+    val layer_name: String,
+    val span_text: String? = null,
+    val span_start: Int? = null,
+    val span_end: Int? = null,
+    val subtypes: List<SubtypeDto> = emptyList(),
+    val misheard_as: String? = null,
+    val severity: Int? = null,
+    val note: String? = null,
+    val created_at: Long,
+)
+
+@Serializable
+data class VocabUploadDto(
+    val word: String,
+    val context: String? = null,
+    val translation: String? = null,
+    val familiarity: Int = 0,
+    val review_count: Int = 0,
+)
+
+@Serializable
+data class PhoneErrorDto(val word: String, val canonical: String, val actual: String? = null)
+
+@Serializable
+data class ScoreUploadDto(
+    val unit_text: String,
+    val accuracy: Int,
+    val fluency: Int,
+    val errors: List<PhoneErrorDto> = emptyList(),
+    val created_at: Long,
+)
+
+@Serializable
+data class GeneratePracticeRequest(
+    val issues: List<IssueUploadDto> = emptyList(),
+    val vocab: List<VocabUploadDto> = emptyList(),
+    val scores: List<ScoreUploadDto> = emptyList(),
+    val max_sets: Int = 5,
+    val language: String = "en",
+)
+
+@Serializable
+data class GeneratePracticeResponse(val sets: List<PracticeSetDto> = emptyList(), val analysis: String? = null)
+
+/**
+ * 一组练习。服务器生成与本地生成共用；items 按 type 决定用哪些字段：
+ *
+ * | type | 用到的字段 |
+ * |---|---|
+ * | flashcard | text(词) translation speak explanation vocab_word |
+ * | choice | text(含空的句子) speak options answer explanation |
+ * | cloze_listen | speak(整句) text(挖空后) blank_start/blank_end options answer |
+ * | reorder | chunks(打乱) answer_chunks(正确顺序) translation |
+ * | minimal_pair | pair speak(=answer) answer |
+ * | shadow | text speak translation |
+ * | translation_match | text speak options(中文) answer |
+ * | explain | text(讲解) |
+ */
+@Serializable
+data class PracticeSetDto(
+    val id: String,
+    val title: String,
+    val description: String = "",
+    val source: String = "local",
+    val layers: List<Int> = emptyList(),
+    val items: List<PracticeItemDto> = emptyList(),
+    val created_at: Long = 0,
+)
+
+@Serializable
+data class PracticeItemDto(
+    val id: String,
+    val type: String,
+    val prompt: String? = null,
+    val text: String? = null,
+    val translation: String? = null,
+    val speak: String? = null,
+    val blank_start: Int? = null,
+    val blank_end: Int? = null,
+    val options: List<String> = emptyList(),
+    val answer: String? = null,
+    val chunks: List<String> = emptyList(),
+    val answer_chunks: List<String> = emptyList(),
+    val pair: List<String> = emptyList(),
+    val explanation: String? = null,
+    val layer: Int? = null,
+    val issue_ids: List<Long> = emptyList(),
+    val vocab_word: String? = null,
+)
+
+@Serializable
+data class PracticeReportRequest(
+    val set_id: String,
+    val results: List<PracticeItemResultDto>,
+    val completed: Boolean,
+)
+
+@Serializable
+data class PracticeItemResultDto(val item_id: String, val correct: Boolean, val answer: String? = null)
+
+object PracticeTypes {
+    const val FLASHCARD = "flashcard"
+    const val CHOICE = "choice"
+    const val CLOZE_LISTEN = "cloze_listen"
+    const val REORDER = "reorder"
+    const val MINIMAL_PAIR = "minimal_pair"
+    const val SHADOW = "shadow"
+    const val TRANSLATION_MATCH = "translation_match"
+    const val EXPLAIN = "explain"
+
+    fun label(type: String) = when (type) {
+        FLASHCARD -> "闪卡"
+        CHOICE -> "选词"
+        CLOZE_LISTEN -> "听写填空"
+        REORDER -> "句子重组"
+        MINIMAL_PAIR -> "辨音"
+        SHADOW -> "跟读"
+        TRANSLATION_MATCH -> "选译文"
+        EXPLAIN -> "讲解"
+        else -> type
+    }
+}

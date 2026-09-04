@@ -3,9 +3,14 @@ package com.echoplayer.app.data.model
 /**
  * Echo Player 的核心概念：听不懂时，问题出在五个处理层面中的哪一层。
  *
- * 五层定义来自 Echo_player/design.md 与 classification.md。每一层附带
- * "现在就能做的动作"（[actions]），供离线时的定位面板使用；接入教学 Agent 后，
- * 这些动作会作为 prompt 的一部分交给模型（见 docs/SERVER_API.md `/issues/explain`）。
+ * 五层定义来自 Echo_player/design.md 与 classification.md。
+ *
+ * 光有"哪一层"不够细，AI 无法据此生成针对性语料，所以每一层还带：
+ * - [subtypes]：这一层下面的细分类型，用户点选即可，带英文描述原样发给服务器；
+ * - [spanHint]：提示用户划选出具体卡在哪几个词。
+ *
+ * 一条记录最终是「句子 + 词范围 + 层 + 细分类型 + 程度 + 可选的一句话」，
+ * 精确到足以让 AI 生成对应的练习（见 docs/SERVER_API.md `/issues/explain`、`/practice/generate`）。
  */
 enum class ProblemLayer(
     val id: Int,
@@ -15,6 +20,8 @@ enum class ProblemLayer(
     val definition: String,
     val symptoms: List<String>,
     val actions: List<LayerAction>,
+    val subtypes: List<IssueSubtype>,
+    val spanHint: String,
 ) {
     PHONETIC(
         id = 1,
@@ -32,6 +39,16 @@ enum class ProblemLayer(
             LayerAction.WORD_BY_WORD,
             LayerAction.SHADOW_SCORE,
         ),
+        subtypes = listOf(
+            IssueSubtype("linking", "连读", "could not hear the linking between words"),
+            IssueSubtype("reduction", "弱读、吞音", "weak forms or elided sounds made the words disappear"),
+            IssueSubtype("speed", "语速太快", "the passage was too fast to parse"),
+            IssueSubtype("unfamiliar_sound", "读音和拼写对不上", "the pronunciation did not match what the spelling led me to expect"),
+            IssueSubtype("similar_sound", "相似音混淆", "confused two similar sounds (minimal pair)"),
+            IssueSubtype("stress", "重音、语调", "the stress or intonation pattern threw me off"),
+            IssueSubtype("boundary", "分不出词边界", "could not tell where one word ended and the next began"),
+        ),
+        spanHint = "划出听糊的那一两个词",
     ),
     LEXICAL_FORM(
         id = 2,
@@ -49,6 +66,15 @@ enum class ProblemLayer(
             LayerAction.REVEAL_TEXT,
             LayerAction.ADD_VOCAB,
         ),
+        subtypes = listOf(
+            IssueSubtype("misheard", "听成了别的词", "heard a different word (see misheard_as)"),
+            IssueSubtype("known_not_recognized", "认识但没反应过来", "know the word in writing but did not recognize it by ear"),
+            IssueSubtype("proper_noun", "人名、地名", "a proper noun or name"),
+            IssueSubtype("contraction_number", "缩写、数字", "a contraction, number, or abbreviation"),
+            IssueSubtype("inflection", "词形变化没听出", "missed an inflection such as plural, past tense, or third person -s"),
+            IssueSubtype("rare_word", "没在语音里遇到过", "a word never encountered in speech before"),
+        ),
+        spanHint = "划出没认出来的那个词",
     ),
     LEXICAL_SEMANTICS(
         id = 3,
@@ -66,6 +92,15 @@ enum class ProblemLayer(
             LayerAction.LOOKUP_WORD,
             LayerAction.ADD_VOCAB,
         ),
+        subtypes = listOf(
+            IssueSubtype("unknown_word", "不认识这个词", "do not know this word at all"),
+            IssueSubtype("known_word_new_sense", "熟词生义", "know the word but not the sense used here"),
+            IssueSubtype("phrase", "短语、动词搭配", "a phrasal verb or collocation"),
+            IssueSubtype("idiom", "习语、俚语", "an idiom or slang expression"),
+            IssueSubtype("polysemy", "多义词选错义项", "picked the wrong sense of a polysemous word"),
+            IssueSubtype("nuance", "褒贬、语气拿不准", "unsure about the connotation or register"),
+        ),
+        spanHint = "划出不懂意思的词或短语",
     ),
     SYNTAX(
         id = 4,
@@ -83,6 +118,16 @@ enum class ProblemLayer(
             LayerAction.SLOW_REPLAY,
             LayerAction.NOTE_QUESTION,
         ),
+        subtypes = listOf(
+            IssueSubtype("svo", "主谓宾对不上", "could not identify the subject, verb, or object"),
+            IssueSubtype("clause", "从句嵌套", "an embedded or relative clause"),
+            IssueSubtype("modifier", "修饰谁不清楚", "unclear what the modifier attaches to"),
+            IssueSubtype("inversion", "倒装、省略", "inversion or ellipsis"),
+            IssueSubtype("reference", "指代不清", "an unclear pronoun or reference"),
+            IssueSubtype("tense_voice", "时态、被动", "tense, aspect, or passive voice"),
+            IssueSubtype("lost_midway", "长句中途走偏", "lost the structure midway through a long sentence"),
+        ),
+        spanHint = "划出结构走偏的那一段，也可以整句",
     ),
     COMPOSITIONAL(
         id = 5,
@@ -100,10 +145,35 @@ enum class ProblemLayer(
             LayerAction.CONTEXT_REPLAY,
             LayerAction.NOTE_QUESTION,
         ),
+        subtypes = listOf(
+            IssueSubtype("literal_ok", "字面懂整体不懂", "understood every word but not the overall meaning"),
+            IssueSubtype("figurative", "比喻、反讽", "metaphor, irony, or figurative use"),
+            IssueSubtype("logic", "逻辑关系没接上", "the logical relation (cause, contrast, condition) was unclear"),
+            IssueSubtype("pragmatics", "言外之意", "implied meaning or pragmatics"),
+            IssueSubtype("culture", "缺文化背景", "missing cultural or domain background"),
+            IssueSubtype("context", "和上下文接不上", "could not connect it with the preceding sentences"),
+        ),
+        spanHint = "通常是整句；也可以划出最别扭的部分",
     );
+
+    fun subtype(id: String): IssueSubtype? = subtypes.firstOrNull { it.id == id }
 
     companion object {
         fun fromId(id: Int): ProblemLayer = entries.firstOrNull { it.id == id } ?: PHONETIC
+    }
+}
+
+/** 某一层下的细分类型。[promptEn] 是发给 AI 的英文描述，决定了它能生成什么样的语料。 */
+data class IssueSubtype(val id: String, val label: String, val promptEn: String)
+
+/** 没听懂的程度。0 = 未选。 */
+enum class Severity(val id: Int, val label: String, val promptEn: String) {
+    AFTER_TEXT(1, "看原文才懂", "understood only after seeing the text"),
+    HEARD_NOT_UNDERSTOOD(2, "听出词没懂", "heard the words but did not understand them"),
+    MISSED(3, "完全没听出", "did not catch it at all");
+
+    companion object {
+        fun fromId(id: Int): Severity? = entries.firstOrNull { it.id == id }
     }
 }
 

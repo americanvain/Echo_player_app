@@ -114,6 +114,9 @@ interface PracticeDao {
     @Query("SELECT * FROM practice_records ORDER BY createdAt DESC LIMIT :limit")
     fun observeRecent(limit: Int = 500): Flow<List<PracticeRecordEntity>>
 
+    @Query("SELECT * FROM practice_records ORDER BY createdAt DESC LIMIT :limit")
+    suspend fun recent(limit: Int): List<PracticeRecordEntity>
+
     @Query("SELECT * FROM practice_records WHERE unitId = :unitId ORDER BY createdAt DESC")
     fun observeForUnit(unitId: String): Flow<List<PracticeRecordEntity>>
 
@@ -169,6 +172,39 @@ interface IssueDao {
 
     @Query("SELECT unitId, COUNT(*) AS n FROM issues WHERE materialId = :materialId AND resolved = 0 GROUP BY unitId")
     fun observeOpenByUnit(materialId: String): Flow<List<UnitIssueCount>>
+
+    @Query("SELECT * FROM issues WHERE resolved = 0 ORDER BY createdAt DESC LIMIT :limit")
+    suspend fun openIssues(limit: Int = 200): List<IssueEntity>
+
+    @Query("SELECT COUNT(*) FROM issues WHERE resolved = 0")
+    fun observeOpenCount(): Flow<Int>
+
+    @Query("UPDATE issues SET resolved = 1, resolvedAt = :at WHERE id IN (:ids)")
+    suspend fun resolveAll(ids: List<Long>, at: Long)
+}
+
+@Dao
+interface PracticeSetDao {
+    @Query("SELECT * FROM practice_sets ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<PracticeSetEntity>>
+
+    @Query("SELECT * FROM practice_sets WHERE id = :id")
+    suspend fun get(id: String): PracticeSetEntity?
+
+    @Query("SELECT * FROM practice_sets WHERE id = :id")
+    fun observe(id: String): Flow<PracticeSetEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(sets: List<PracticeSetEntity>)
+
+    @Update
+    suspend fun update(set: PracticeSetEntity)
+
+    @Query("DELETE FROM practice_sets WHERE id = :id")
+    suspend fun delete(id: String)
+
+    @Query("SELECT COUNT(*) FROM practice_sets WHERE completedAt IS NULL")
+    fun observePendingCount(): Flow<Int>
 }
 
 data class LayerCount(val layer: Int, val n: Int)

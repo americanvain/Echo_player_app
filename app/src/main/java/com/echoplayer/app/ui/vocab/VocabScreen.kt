@@ -57,9 +57,13 @@ import com.echoplayer.app.ui.common.relativeTime
 import com.echoplayer.app.ui.theme.EchoColors
 import com.echoplayer.app.util.Words
 
+/**
+ * 生词本。它属于"问题记录"的一部分（生词就是词义层的问题），所以嵌在「记录」页里当一个标签页，
+ * 不再单独占一个底部导航位。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VocabScreen(onOpenUnit: (materialId: String, unitId: String) -> Unit) {
+fun VocabPane(onOpenUnit: (materialId: String, unitId: String) -> Unit) {
     val vm = echoViewModel { VocabViewModel(it) }
     val all by vm.all.collectAsStateWithLifecycle()
     val review by vm.review.collectAsStateWithLifecycle()
@@ -76,44 +80,47 @@ fun VocabScreen(onOpenUnit: (materialId: String, unitId: String) -> Unit) {
     val filtered = all.filter { (filter < 0 || it.familiarity == filter) && (query.isBlank() || it.word.contains(query.trim().lowercase()) || it.contextSentence?.lowercase()?.contains(query.trim().lowercase()) == true) }
     val dueCount = all.count { it.familiarity < Familiarity.KNOWN }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("生词本 · ${all.size}", fontWeight = FontWeight.Bold) },
-                actions = {
-                    TextButton(onClick = { vm.startReview() }, enabled = dueCount > 0) { Text("复习 ($dueCount)") }
-                },
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "共 ${all.size} 个词",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
             )
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            OutlinedTextField(
-                value = query, onValueChange = { query = it },
-                placeholder = { Text("搜索单词或例句") },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+            TextButton(onClick = { vm.startReview() }, enabled = dueCount > 0) { Text("复习 ($dueCount)") }
+        }
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = { Text("搜索单词或例句") },
+            leadingIcon = { Icon(Icons.Default.Search, null) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        )
+        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = filter < 0, onClick = { filter = -1 }, label = { Text("全部") })
+            (0..2).forEach { f -> FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(Familiarity.label(f)) }) }
+        }
+        if (filtered.isEmpty()) {
+            EmptyState(
+                Icons.Default.Style,
+                if (all.isEmpty()) "生词本是空的" else "没有匹配的词",
+                "在听读页点句子里的单词，或者划选一段再加入，就会收到这里",
             )
-            Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = filter < 0, onClick = { filter = -1 }, label = { Text("全部") })
-                (0..2).forEach { f -> FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(Familiarity.label(f)) }) }
-            }
-            if (filtered.isEmpty()) {
-                EmptyState(Icons.Default.Style, if (all.isEmpty()) "生词本是空的" else "没有匹配的词", "在跟读页点句子里的单词，或长按单词，就能加进来")
-            } else {
-                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(filtered, key = { it.id }) { e ->
-                        VocabCard(
-                            e = e,
-                            expanded = expanded == e.id,
-                            onToggle = { expanded = if (expanded == e.id) null else e.id },
-                            onSpeak = { vm.speak(e.word) },
-                            onDelete = { vm.delete(e) },
-                            onFamiliarity = { vm.setFamiliarity(e, it) },
-                            onSave = { note, tr -> vm.saveNote(e, note, tr) },
-                            onOpen = { if (e.materialId != null && e.unitId != null) onOpenUnit(e.materialId, e.unitId) },
-                        )
-                    }
+        } else {
+            LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(filtered, key = { it.id }) { e ->
+                    VocabCard(
+                        e = e,
+                        expanded = expanded == e.id,
+                        onToggle = { expanded = if (expanded == e.id) null else e.id },
+                        onSpeak = { vm.speak(e.word) },
+                        onDelete = { vm.delete(e) },
+                        onFamiliarity = { vm.setFamiliarity(e, it) },
+                        onSave = { note, tr -> vm.saveNote(e, note, tr) },
+                        onOpen = { if (e.materialId != null && e.unitId != null) onOpenUnit(e.materialId, e.unitId) },
+                    )
                 }
             }
         }

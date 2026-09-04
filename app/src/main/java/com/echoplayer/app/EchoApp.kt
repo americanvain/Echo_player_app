@@ -10,6 +10,7 @@ import com.echoplayer.app.data.remote.EchoServerApi
 import com.echoplayer.app.data.repo.IssueRepository
 import com.echoplayer.app.data.repo.MaterialRepository
 import com.echoplayer.app.data.repo.PracticeRepository
+import com.echoplayer.app.data.repo.PracticeSetRepository
 import com.echoplayer.app.data.repo.VocabRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,7 @@ class EchoApp : Application() {
     val practice by lazy { PracticeRepository(db.practiceDao(), api) }
     val issues by lazy { IssueRepository(db.issueDao(), api) }
     val vocab by lazy { VocabRepository(db.vocabDao()) }
+    val practiceSets by lazy { PracticeSetRepository(db.practiceSetDao(), db.issueDao(), db.vocabDao(), db.practiceDao(), db.materialDao(), api) }
 
     val tts by lazy { TtsEngine(this) }
     val recorder by lazy { WavRecorder() }

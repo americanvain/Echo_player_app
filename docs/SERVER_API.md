@@ -85,7 +85,8 @@ POST /translate
 
 ### 2.5 教学 Agent（问题定位 → 讲解）
 
-这是 Echo_player 第四部分。客户端把**句子、前两句上下文、译文、用户按下的层、用户写的疑问、这句上历史疑问**一起发过去。
+这是 Echo_player 第四部分。定位的**精度**是关键：客户端不只发"哪一层"，还发**卡在哪几个词**、
+**是这一层的哪一种问题**、**到什么程度**，这样 AI 才能生成对得上的讲解和语料。
 
 ```
 POST /issues/explain
@@ -95,6 +96,15 @@ POST /issues/explain
   "translation": "…",
   "layer": 4,
   "layer_name": "Syntactic Parsing",
+
+  "span_text": "the tighter the traveler held",   // 用户划出来的片段，null = 整句
+  "span_start": 5,                                  // 词索引（按空白切分），闭区间
+  "span_end": 9,
+  "subtypes": [                                     // 该层下的细分，可多选
+    { "id": "pattern", "description": "comparative, conditional, or another structural pattern" }
+  ],
+  "misheard_as": null,                              // 词形层专有：听成了什么
+  "severity": 2,                                    // 1 看原文才懂 / 2 听出词没懂 / 3 完全没听出
   "note": "the harder ... the tighter 这个结构没反应过来",
   "history": ["上次在这句记的疑问"]
 }
@@ -105,6 +115,79 @@ POST /issues/explain
   "quiz": [ { "question": "…", "options": ["…"], "answer": "…" } ]
 }
 ```
+
+#### 细分类型全表
+
+`subtypes[].id` 取自下表，`description` 是客户端一并带上的英文说明，服务器可以直接塞进 prompt。
+
+| 层 | id |
+|---|---|
+| 1 语音 | `linking` `reduction` `speed` `unfamiliar_sound` `similar_sound` `stress` `boundary` |
+| 2 词形 | `misheard` `known_not_recognized` `proper_noun` `contraction_number` `inflection` `rare_word` |
+| 3 词义 | `unknown_word` `known_word_new_sense` `phrase` `idiom` `polysemy` `nuance` |
+| 4 句法 | `svo` `clause` `modifier` `inversion` `reference` `tense_voice` `lost_midway` |
+| 5 语义 | `literal_ok` `figurative` `logic` `pragmatics` `culture` `context` |
+
+权威定义在客户端 `data/model/ProblemLayer.kt`，加选项时两边一起改。
+
+### 2.6 生成针对性练习
+
+Echo_player 的第二种练习模式：把记录交给服务器，AI 分析问题产生的原因，生成对应的语料。
+
+```
+POST /practice/generate
+{
+  "issues": [ { …与 /issues/explain 同构，另有 "id" 与 "created_at"… } ],
+  "vocab":  [ { "word": "shone", "context": "…", "translation": "…", "familiarity": 0, "review_count": 2 } ],
+  "scores": [ { "unit_text": "I think this", "accuracy": 55, "fluency": 40, "created_at": 0,
+                "errors": [ { "word": "think", "canonical": "θ", "actual": "s" } ] } ],
+  "max_sets": 5,
+  "language": "en"
+}
+→
+{
+  "analysis": "你的问题集中在连读和 θ/s 的分辨上……",     // 可选，显示在练习区顶部
+  "sets": [
+    {
+      "id": "srv-20260904-1",
+      "title": "连读听写",
+      "description": "针对你标记的 3 处连读",
+      "layers": [1],
+      "items": [ … ]
+    }
+  ]
+}
+```
+
+#### 题型与字段
+
+`items[].type` 决定用哪些字段。客户端本机生成器出的是同一套结构（`data/local/LocalPracticeGenerator.kt`）。
+
+| type | 界面 | 用到的字段 |
+|---|---|---|
+| `flashcard` | 闪卡，点开看释义，答"认识 / 不认识" | `text`(词) `translation` `speak` `vocab_word` |
+| `choice` | 选词填空 | `text`(含 `____` 的句子) `speak` `options` `answer` |
+| `cloze_listen` | 听整句，选出空缺的片段 | `speak`(整句) `text`(挖空后) `blank_start` `blank_end` `options` `answer` |
+| `reorder` | 句子重组，按顺序点词块 | `chunks`(打乱) `answer_chunks`(正确顺序) `translation` |
+| `minimal_pair` | 辨音，听一个词在两个词里选 | `pair`(两个词) `speak`(=`answer`) `answer` |
+| `shadow` | 跟读并打分（走 `/assess`） | `text` `speak` `translation` |
+| `translation_match` | 选出正确的中文译文 | `text` `speak` `options`(中文) `answer` |
+| `explain` | 只讲解，点"明白了" | `text` |
+
+公共字段：`id`（组内唯一）、`prompt`（题干提示）、`explanation`（答完显示）、`layer`、
+`issue_ids`（这题针对哪几条问题记录；全组做完后答对的那些会被标记为已解决）。
+
+### 2.7 回传练习结果
+
+```
+POST /practice/report
+{ "set_id": "srv-20260904-1",
+  "results": [ { "item_id": "i1", "correct": true, "answer": "the tighter" } ],
+  "completed": true }
+→ 200 {}
+```
+
+只有 `source = server` 的练习集会回传，供服务器调整下一次生成。
 
 五层的 id 与名称（与 `ProblemLayer.kt` 一致）：
 

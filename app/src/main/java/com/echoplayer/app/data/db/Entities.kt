@@ -1,5 +1,6 @@
 package com.echoplayer.app.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -111,6 +112,49 @@ data class IssueEntity(
     val resolved: Boolean = false,
     val createdAt: Long,
     val resolvedAt: Long? = null,
+    // ---- v2：精确定位 ----
+    /** 划选的词范围（闭区间，词索引，按空白切分）；-1 = 整句。 */
+    @ColumnInfo(defaultValue = "-1") val spanStart: Int = -1,
+    @ColumnInfo(defaultValue = "-1") val spanEnd: Int = -1,
+    val spanText: String? = null,
+    /** 细分类型 id，逗号分隔（见 ProblemLayer.subtypes）。 */
+    @ColumnInfo(defaultValue = "") val subtypes: String = "",
+    /** 词形层：听成了什么。 */
+    val misheardAs: String? = null,
+    /** 程度（Severity.id），0 = 未选择。 */
+    @ColumnInfo(defaultValue = "0") val severity: Int = 0,
+    /** 前两句快照，脱离素材也能给 AI 提供上下文。 */
+    val contextBefore: String? = null,
+    val translation: String? = null,
+) {
+    val subtypeIds: List<String> get() = subtypes.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    val isWholeSentence: Boolean get() = spanStart < 0
+}
+
+/**
+ * 一组针对性练习（Echo_player "根据记录生成特定资源"）。
+ * items 以 JSON 保存（PracticeSetDto 的 items），服务器生成与本地生成共用一种结构。
+ */
+@Entity(tableName = "practice_sets", indices = [Index("createdAt")])
+data class PracticeSetEntity(
+    @PrimaryKey val id: String,
+    val title: String,
+    val description: String = "",
+    /** local | server */
+    val source: String,
+    /** 涉及的层，逗号分隔。 */
+    val layers: String = "",
+    val itemsJson: String,
+    val total: Int,
+    val createdAt: Long,
+    val lastIndex: Int = 0,
+    val correct: Int = 0,
+    val wrong: Int = 0,
+    val completedAt: Long? = null,
+    /** itemId → 是否答对，JSON 对象。 */
+    val resultsJson: String = "{}",
+    /** 是否已把结果回传给服务器。 */
+    val reported: Boolean = false,
 )
 
 /** 生词本条目。word 统一小写做唯一键，displayWord 保留原样。 */

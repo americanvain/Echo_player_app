@@ -1,6 +1,7 @@
 package com.echoplayer.app.data.db
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -13,15 +14,18 @@ import androidx.room.RoomDatabase
         PracticeRecordEntity::class,
         IssueEntity::class,
         VocabEntity::class,
+        PracticeSetEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class EchoDatabase : RoomDatabase() {
     abstract fun materialDao(): MaterialDao
     abstract fun practiceDao(): PracticeDao
     abstract fun issueDao(): IssueDao
     abstract fun vocabDao(): VocabDao
+    abstract fun practiceSetDao(): PracticeSetDao
 
     companion object {
         fun build(context: Context): EchoDatabase =

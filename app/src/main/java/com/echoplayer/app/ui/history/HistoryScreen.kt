@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -50,11 +52,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.echoplayer.app.data.db.IssueEntity
 import com.echoplayer.app.data.db.PracticeRecordEntity
 import com.echoplayer.app.data.model.ProblemLayer
+import com.echoplayer.app.data.model.Severity
 import com.echoplayer.app.ui.common.EmptyState
 import com.echoplayer.app.ui.common.Tag
 import com.echoplayer.app.ui.common.echoViewModel
 import com.echoplayer.app.ui.common.formatTime
 import com.echoplayer.app.ui.theme.EchoColors
+import com.echoplayer.app.ui.vocab.VocabPane
 
 /**
  * Echo_player 第五部分"记录"：问题时间线 + 跟读评分时间线。
@@ -69,6 +73,7 @@ fun HistoryScreen(onOpenUnit: (materialId: String, unitId: String) -> Unit) {
     val practices by vm.practices.collectAsStateWithLifecycle()
     val practiceCount by vm.practiceCount.collectAsStateWithLifecycle()
     val avg by vm.averageAccuracy.collectAsStateWithLifecycle()
+    val vocabCount by vm.vocabCount.collectAsStateWithLifecycle()
     var tab by remember { mutableIntStateOf(0) }
     var layerFilter by remember { mutableStateOf<Int?>(null) }
     var showResolved by remember { mutableStateOf(true) }
@@ -77,10 +82,13 @@ fun HistoryScreen(onOpenUnit: (materialId: String, unitId: String) -> Unit) {
         Column(Modifier.fillMaxSize().padding(padding)) {
             StatsHeader(counts = counts, totalIssues = issues.size, openIssues = issues.count { !it.resolved }, practiceCount = practiceCount, avg = avg)
             TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("问题定位 (${issues.size})") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("跟读评分 ($practiceCount)") })
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("问题 ${issues.size}") })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("生词 $vocabCount") })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("跟读 $practiceCount") })
             }
-            if (tab == 0) {
+            if (tab == 1) {
+                VocabPane(onOpenUnit = onOpenUnit)
+            } else if (tab == 0) {
                 Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(selected = layerFilter == null, onClick = { layerFilter = null }, label = { Text("全部") })
                     ProblemLayer.entries.forEach { l ->
@@ -152,6 +160,7 @@ private fun StatTile(label: String, value: String, unit: String, modifier: Modif
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun IssueCard(i: IssueEntity, onOpen: () -> Unit, onResolved: (Boolean) -> Unit, onDelete: () -> Unit) {
     val layer = ProblemLayer.fromId(i.layer)
@@ -167,6 +176,25 @@ private fun IssueCard(i: IssueEntity, onOpen: () -> Unit, onResolved: (Boolean) 
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(i.unitText, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                if (!i.isWholeSentence && !i.spanText.isNullOrBlank()) {
+                    Text(
+                        "卡在：${i.spanText}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = color,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 3.dp),
+                    )
+                }
+                val detail = buildList {
+                    addAll(i.subtypeIds.mapNotNull { id -> layer.subtype(id)?.label })
+                    Severity.fromId(i.severity)?.let { add(it.label) }
+                    i.misheardAs?.takeIf { it.isNotBlank() }?.let { add("听成了 $it") }
+                }
+                if (detail.isNotEmpty()) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(top = 4.dp)) {
+                        detail.forEach { Tag(it, color = color) }
+                    }
+                }
                 i.note?.let { Text("疑问：$it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp)) }
                 i.explanation?.let { Text("讲解：${it.take(120)}", style = MaterialTheme.typography.bodySmall, color = color, modifier = Modifier.padding(top = 4.dp), maxLines = 3, overflow = TextOverflow.Ellipsis) }
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -40,6 +40,11 @@ class VocabRepository(private val dao: VocabDao) {
 
     suspend fun dueForReview(limit: Int = 20) = dao.dueForReview(limit)
 
+    /** 练习里的闪卡答完后更新熟悉度。 */
+    suspend fun reviewByWord(word: String, known: Boolean) {
+        dao.byWord(normalize(word))?.let { review(it, known) }
+    }
+
     suspend fun review(entry: VocabEntity, known: Boolean) {
         val f = if (known) minOf(Familiarity.KNOWN, entry.familiarity + 1) else Familiarity.NEW
         dao.review(entry.id, f, System.currentTimeMillis())

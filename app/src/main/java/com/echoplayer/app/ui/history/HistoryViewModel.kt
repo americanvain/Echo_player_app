@@ -17,6 +17,7 @@ class HistoryViewModel(private val app: EchoApp) : ViewModel() {
     val practices: StateFlow<List<PracticeRecordEntity>> = app.practice.recent.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val practiceCount: StateFlow<Int> = app.practice.count.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
     val averageAccuracy: StateFlow<Double?> = app.practice.averageAccuracy.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val vocabCount: StateFlow<Int> = app.vocab.count.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     fun setResolved(issue: IssueEntity, resolved: Boolean) = viewModelScope.launch { app.issues.setResolved(issue.id, resolved) }
     fun deleteIssue(issue: IssueEntity) = viewModelScope.launch { app.issues.delete(issue.id) }
