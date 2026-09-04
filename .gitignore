@@ -11,3 +11,6 @@
 *.keystore
 *.jks
 !gradle/wrapper/gradle-wrapper.jar
+
+# 本机备忘（密钥位置、工具链路径），不进仓库
+/LOCAL_NOTES.md
