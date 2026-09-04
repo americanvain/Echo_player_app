@@ -1,0 +1,74 @@
+{
+  "id": "coffee-shop",
+  "title": "At the Coffee Shop",
+  "title_zh": "在咖啡店",
+  "description": "A short everyday conversation: ordering a drink and making small talk.",
+  "description_zh": "一段日常对话：点一杯饮料，随便聊几句。",
+  "level": "A1",
+  "topic": "生活",
+  "language": "en",
+  "source": "Echo Player original",
+  "segments": [
+    {
+      "source_ref": "coffee-shop.txt",
+      "units": [
+        {
+          "text": "Good morning! What can I get for you today?",
+          "translation": "早上好！今天想喝点什么？"
+        },
+        {
+          "text": "Hi. Could I have a medium latte, please?",
+          "translation": "你好。请给我一杯中杯拿铁。"
+        },
+        {
+          "text": "Sure. Would you like it hot or iced?",
+          "translation": "好的。要热的还是冰的？"
+        },
+        {
+          "text": "Hot, please. It's pretty cold outside this morning.",
+          "translation": "热的，谢谢。今天早上外面挺冷的。"
+        },
+        {
+          "text": "I know! Winter came early this year.",
+          "translation": "是啊！今年冬天来得早。"
+        },
+        {
+          "text": "Do you want anything to eat with that?",
+          "translation": "要配点吃的吗？"
+        },
+        {
+          "text": "Hmm, what do you recommend?",
+          "translation": "嗯，你推荐什么？"
+        },
+        {
+          "text": "The blueberry muffins just came out of the oven.",
+          "translation": "蓝莓玛芬刚刚出炉。"
+        },
+        {
+          "text": "Perfect, I'll take one of those.",
+          "translation": "太好了，我要一个。"
+        },
+        {
+          "text": "That'll be six dollars and fifty cents.",
+          "translation": "一共六美元五十美分。"
+        },
+        {
+          "text": "Can I pay by card?",
+          "translation": "可以刷卡吗？"
+        },
+        {
+          "text": "Of course. Just tap it here.",
+          "translation": "当然可以。在这里碰一下就行。"
+        },
+        {
+          "text": "Thanks. Have a nice day!",
+          "translation": "谢谢。祝你今天愉快！"
+        },
+        {
+          "text": "You too. Your order will be ready in a minute.",
+          "translation": "你也是。你的饮料马上就好。"
+        }
+      ]
+    }
+  ]
+}

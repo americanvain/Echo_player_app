@@ -1,0 +1,38 @@
+{
+  "id": "first-presentation",
+  "title": "My First Presentation",
+  "title_zh": "我的第一次演讲",
+  "description": "A short story about turning nervous energy into a confident first step.",
+  "description_zh": "一个把紧张转化为勇敢第一步的小故事。",
+  "level": "B1",
+  "topic": "职场",
+  "language": "en",
+  "source": "speecheval articles",
+  "segments": [
+    {
+      "source_ref": "first-presentation.txt",
+      "units": [
+        {
+          "text": "On Monday morning, I gave my first presentation to the whole team.",
+          "translation": "星期一早上，我第一次向整个团队做了演讲。"
+        },
+        {
+          "text": "My hands were shaking, so I paused and took one slow breath.",
+          "translation": "我的双手在发抖，于是我停下来，慢慢地吸了一口气。"
+        },
+        {
+          "text": "Instead of reading every word, I looked up and spoke to the people in the room.",
+          "translation": "我没有逐字照读，而是抬起头，对着房间里的人说话。"
+        },
+        {
+          "text": "A colleague nodded, and that small sign helped me feel more confident.",
+          "translation": "一位同事点了点头，这个小小的回应让我更加自信。"
+        },
+        {
+          "text": "When I finished, I realized that starting was the hardest part.",
+          "translation": "结束时我才意识到，开始其实是最难的部分。"
+        }
+      ]
+    }
+  ]
+}

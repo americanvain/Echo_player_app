@@ -1,0 +1,70 @@
+{
+  "id": "aesop-tortoise-hare",
+  "title": "The Tortoise and the Hare",
+  "title_zh": "龟兔赛跑",
+  "description": "Slow and steady wins the race.",
+  "description_zh": "稳扎稳打，方能取胜。",
+  "level": "A2",
+  "topic": "寓言",
+  "language": "en",
+  "source": "Aesop's Fables (public domain), retold",
+  "segments": [
+    {
+      "source_ref": "aesop.txt",
+      "units": [
+        {
+          "text": "A hare was making fun of a tortoise for being so slow.",
+          "translation": "一只兔子嘲笑乌龟走得太慢。"
+        },
+        {
+          "text": "\"Do you ever get anywhere?\" he asked with a laugh.",
+          "translation": "“你到底能不能走到哪儿去啊？”他笑着问。"
+        },
+        {
+          "text": "\"Yes,\" replied the tortoise, \"and I get there sooner than you think.\"",
+          "translation": "“能，”乌龟回答，“而且比你想的更快。”"
+        },
+        {
+          "text": "\"Let's race and see,\" said the hare.",
+          "translation": "“那咱们比一场看看，”兔子说。"
+        },
+        {
+          "text": "The fox agreed to be the judge, and the race began.",
+          "translation": "狐狸同意当裁判，比赛开始了。"
+        },
+        {
+          "text": "The hare ran so fast that he was soon far ahead.",
+          "translation": "兔子跑得飞快，很快就遥遥领先。"
+        },
+        {
+          "text": "\"This is too easy,\" he thought. \"I have time for a nap.\"",
+          "translation": "“这也太容易了，”他想，“我还有时间睡一觉。”"
+        },
+        {
+          "text": "So he lay down under a tree and fell asleep.",
+          "translation": "于是他躺在一棵树下睡着了。"
+        },
+        {
+          "text": "Meanwhile, the tortoise kept walking, slowly but without stopping.",
+          "translation": "与此同时，乌龟一直在走，慢，但从不停下。"
+        },
+        {
+          "text": "When the hare woke up, the tortoise was already near the finish line.",
+          "translation": "兔子醒来时，乌龟已经快到终点了。"
+        },
+        {
+          "text": "The hare ran as fast as he could, but it was too late.",
+          "translation": "兔子拼命地跑，可已经来不及了。"
+        },
+        {
+          "text": "The tortoise had won.",
+          "translation": "乌龟赢了。"
+        },
+        {
+          "text": "Slow and steady wins the race.",
+          "translation": "稳扎稳打，方能取胜。"
+        }
+      ]
+    }
+  ]
+}

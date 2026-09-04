@@ -1,0 +1,66 @@
+{
+  "id": "why-sky-blue",
+  "title": "Why Is the Sky Blue?",
+  "title_zh": "天空为什么是蓝色的？",
+  "description": "A short science explainer with a few technical words worth learning.",
+  "description_zh": "一篇简短的科普，有几个值得学的术语。",
+  "level": "B1",
+  "topic": "科学",
+  "language": "en",
+  "source": "Echo Player original",
+  "segments": [
+    {
+      "source_ref": "science.txt",
+      "units": [
+        {
+          "text": "Have you ever wondered why the sky is blue during the day but red or orange at sunset?",
+          "translation": "你有没有想过，为什么白天天空是蓝色的，日落时却变成红色或橙色？"
+        },
+        {
+          "text": "The answer has to do with sunlight and the air itself.",
+          "translation": "答案与阳光和空气本身有关。"
+        },
+        {
+          "text": "Sunlight looks white, but it is actually made up of all the colors of the rainbow.",
+          "translation": "阳光看起来是白色的，其实由彩虹的所有颜色组成。"
+        },
+        {
+          "text": "Each color travels as a wave, and each wave has a different length.",
+          "translation": "每种颜色以波的形式传播，波长各不相同。"
+        },
+        {
+          "text": "Blue light has a short wavelength, while red light has a long one.",
+          "translation": "蓝光波长短，红光波长长。"
+        },
+        {
+          "text": "When sunlight enters the atmosphere, it bumps into tiny molecules of gas.",
+          "translation": "阳光进入大气层时，会撞上微小的气体分子。"
+        },
+        {
+          "text": "These molecules scatter short waves much more than long ones.",
+          "translation": "这些分子对短波的散射远比长波强。"
+        },
+        {
+          "text": "So blue light gets scattered in every direction, and that is what we see when we look up.",
+          "translation": "所以蓝光被散射到四面八方，我们抬头看到的就是它。"
+        },
+        {
+          "text": "At sunset, the light has to travel through much more air to reach your eyes.",
+          "translation": "日落时，光线要穿过厚得多的空气才能到达你的眼睛。"
+        },
+        {
+          "text": "By then, most of the blue has been scattered away.",
+          "translation": "到那时，大部分蓝光已经被散射掉了。"
+        },
+        {
+          "text": "What is left is the red and orange light, which paints the evening sky.",
+          "translation": "剩下的是红光和橙光，它们把傍晚的天空染上颜色。"
+        },
+        {
+          "text": "This effect is called Rayleigh scattering, named after the scientist who explained it.",
+          "translation": "这种现象叫瑞利散射，以解释它的科学家命名。"
+        }
+      ]
+    }
+  ]
+}

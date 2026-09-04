@@ -1,0 +1,54 @@
+{
+  "id": "aesop-fox-grapes",
+  "title": "The Fox and the Grapes",
+  "title_zh": "狐狸与葡萄",
+  "description": "The fable behind the phrase \"sour grapes\", retold in simple English.",
+  "description_zh": "“酸葡萄”这个说法的来源，用简单英语重述。",
+  "level": "A1",
+  "topic": "寓言",
+  "language": "en",
+  "source": "Aesop's Fables (public domain), retold",
+  "segments": [
+    {
+      "source_ref": "aesop.txt",
+      "units": [
+        {
+          "text": "One hot afternoon, a fox was walking through a vineyard.",
+          "translation": "一个炎热的下午，一只狐狸走过一片葡萄园。"
+        },
+        {
+          "text": "High above his head, he saw a bunch of ripe, purple grapes.",
+          "translation": "在头顶高处，他看见一串熟透的紫葡萄。"
+        },
+        {
+          "text": "\"Those look delicious,\" he said. \"Just what I need on a day like this.\"",
+          "translation": "“看起来真好吃，”他说，“这样的天气正需要这个。”"
+        },
+        {
+          "text": "He jumped as high as he could, but he missed them.",
+          "translation": "他使劲往上跳，却没够着。"
+        },
+        {
+          "text": "He stepped back, ran, and jumped again.",
+          "translation": "他退后几步，助跑，再跳一次。"
+        },
+        {
+          "text": "Again and again he tried, and again and again he failed.",
+          "translation": "他试了一次又一次，也失败了一次又一次。"
+        },
+        {
+          "text": "At last, tired and hot, he gave up.",
+          "translation": "最后，他又累又热，放弃了。"
+        },
+        {
+          "text": "As he walked away, he lifted his nose and said, \"They were probably sour anyway.\"",
+          "translation": "走开的时候，他扬起鼻子说：“反正那些葡萄大概是酸的。”"
+        },
+        {
+          "text": "It is easy to hate what you cannot have.",
+          "translation": "得不到的东西，说它不好总是容易的。"
+        }
+      ]
+    }
+  ]
+}

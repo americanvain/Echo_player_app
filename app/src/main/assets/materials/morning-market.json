@@ -1,0 +1,38 @@
+{
+  "id": "morning-market",
+  "title": "A Morning at the Market",
+  "title_zh": "清晨的市场",
+  "description": "Follow a quiet walk through a neighborhood market as the city wakes up.",
+  "description_zh": "跟随一段安静的散步，在城市苏醒时逛逛社区市场。",
+  "level": "A2",
+  "topic": "生活",
+  "language": "en",
+  "source": "speecheval articles",
+  "segments": [
+    {
+      "source_ref": "morning-market.txt",
+      "units": [
+        {
+          "text": "The market opens early, while most of the city is still asleep.",
+          "translation": "市场很早就开门了，那时城市里的大多数人还在睡觉。"
+        },
+        {
+          "text": "Farmers arrange bright vegetables, fresh bread, and flowers on wooden tables.",
+          "translation": "农户们把鲜艳的蔬菜、新鲜面包和花朵摆上木桌。"
+        },
+        {
+          "text": "A coffee seller greets every customer with a warm smile.",
+          "translation": "卖咖啡的人用温暖的微笑迎接每一位顾客。"
+        },
+        {
+          "text": "Neighbors stop to talk, share news, and ask about one another's families.",
+          "translation": "邻居们停下来聊天、分享近况，也会问候彼此的家人。"
+        },
+        {
+          "text": "By nine o'clock, the quiet street is full of voices and friendly faces.",
+          "translation": "到了九点，安静的街道上已经充满了交谈声和友善的面孔。"
+        }
+      ]
+    }
+  ]
+}

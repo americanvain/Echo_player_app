@@ -1,0 +1,38 @@
+{
+  "id": "small-habits",
+  "title": "Small Habits, Big Changes",
+  "title_zh": "小习惯，大改变",
+  "description": "A practical way to make progress without waiting for motivation.",
+  "description_zh": "不必等待动力，也能持续进步的实用方法。",
+  "level": "A2",
+  "topic": "成长",
+  "language": "en",
+  "source": "speecheval articles",
+  "segments": [
+    {
+      "source_ref": "small-habits.txt",
+      "units": [
+        {
+          "text": "Big changes often begin with very small actions.",
+          "translation": "巨大的改变往往始于非常微小的行动。"
+        },
+        {
+          "text": "If you want to read more, start with one page before bed each night.",
+          "translation": "如果你想多读书，可以从每晚睡前读一页开始。"
+        },
+        {
+          "text": "The action may feel too easy, but that is exactly why you will repeat it.",
+          "translation": "这个行动可能显得太简单，但正因如此，你才会不断重复。"
+        },
+        {
+          "text": "After a few weeks, the habit becomes a natural part of your day.",
+          "translation": "几周以后，这个习惯就会自然地融入你的生活。"
+        },
+        {
+          "text": "Do not focus on being perfect; focus on showing up again tomorrow.",
+          "translation": "不要执着于做到完美，而要专注于明天继续行动。"
+        }
+      ]
+    }
+  ]
+}

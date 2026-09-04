@@ -1,0 +1,70 @@
+{
+  "id": "gift-of-the-magi",
+  "title": "The Gift of the Magi (opening)",
+  "title_zh": "麦琪的礼物（开篇）",
+  "description": "The famous opening of O. Henry's 1905 short story. Long sentences, rich vocabulary.",
+  "description_zh": "欧·亨利 1905 年名篇的开头。长句多，词汇丰富。",
+  "level": "B2",
+  "topic": "文学",
+  "language": "en",
+  "source": "O. Henry, 1905 (public domain)",
+  "segments": [
+    {
+      "source_ref": "magi.txt",
+      "units": [
+        {
+          "text": "One dollar and eighty-seven cents.",
+          "translation": "一块八毛七。"
+        },
+        {
+          "text": "That was all.",
+          "translation": "就这么多。"
+        },
+        {
+          "text": "And sixty cents of it was in pennies.",
+          "translation": "其中六毛还是一分一分的硬币。"
+        },
+        {
+          "text": "Pennies saved one and two at a time by bulldozing the grocer and the vegetable man and the butcher until one's cheeks burned with the silent imputation of parsimony that such close dealing implied.",
+          "translation": "这些硬币是一分两分地攒下来的，靠的是跟杂货商、菜贩和肉贩死磨硬泡，磨到自己脸上发烫——这样斤斤计较，分明是在无声地被人说小气。"
+        },
+        {
+          "text": "Three times Della counted it.",
+          "translation": "德拉数了三遍。"
+        },
+        {
+          "text": "One dollar and eighty-seven cents.",
+          "translation": "一块八毛七。"
+        },
+        {
+          "text": "And the next day would be Christmas.",
+          "translation": "而第二天就是圣诞节了。"
+        },
+        {
+          "text": "There was clearly nothing to do but flop down on the shabby little couch and howl.",
+          "translation": "显然，除了一头扑到那张破旧的小沙发上放声大哭，再没别的办法。"
+        },
+        {
+          "text": "So Della did it.",
+          "translation": "德拉就这么做了。"
+        },
+        {
+          "text": "Which instigates the moral reflection that life is made up of sobs, sniffles, and smiles, with sniffles predominating.",
+          "translation": "这不禁让人生出一番感慨：人生是由啜泣、抽噎和微笑组成的，而抽噎占了大头。"
+        },
+        {
+          "text": "While the mistress of the home is gradually subsiding from the first stage to the second, take a look at the home.",
+          "translation": "趁这位家庭主妇从第一阶段慢慢过渡到第二阶段的工夫，我们来看看这个家。"
+        },
+        {
+          "text": "A furnished flat at $8 per week.",
+          "translation": "一套每周八美元的带家具公寓。"
+        },
+        {
+          "text": "It did not exactly beggar description, but it certainly had that word on the lookout for the mendicancy squad.",
+          "translation": "倒也不至于穷得无法形容，但“穷”这个字眼确实正提防着乞丐纠察队找上门来。"
+        }
+      ]
+    }
+  ]
+}

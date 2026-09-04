@@ -1,0 +1,58 @@
+{
+  "id": "gettysburg",
+  "title": "The Gettysburg Address",
+  "title_zh": "葛底斯堡演说",
+  "description": "Lincoln's 1863 speech: ten sentences, some of them very long. Good practice for syntax.",
+  "description_zh": "林肯 1863 年的演说：十句话，有几句非常长，适合练句法。",
+  "level": "C1",
+  "topic": "演讲",
+  "language": "en",
+  "source": "Abraham Lincoln, 1863 (public domain)",
+  "segments": [
+    {
+      "source_ref": "gettysburg.txt",
+      "units": [
+        {
+          "text": "Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.",
+          "translation": "八十七年前，我们的先辈在这块大陆上创立了一个新国家，它孕育于自由之中，奉行人人生而平等的原则。"
+        },
+        {
+          "text": "Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived and so dedicated, can long endure.",
+          "translation": "如今我们正在进行一场伟大的内战，以考验这个国家，或者任何一个如此孕育、如此奉行原则的国家，能否长久存在。"
+        },
+        {
+          "text": "We are met on a great battle-field of that war.",
+          "translation": "我们相聚在这场战争的一个伟大战场上。"
+        },
+        {
+          "text": "We have come to dedicate a portion of that field, as a final resting place for those who here gave their lives that that nation might live.",
+          "translation": "我们来到这里，是要把这战场的一部分奉献给那些为了国家的生存而在此献出生命的人，作为他们最后的安息之所。"
+        },
+        {
+          "text": "It is altogether fitting and proper that we should do this.",
+          "translation": "我们这样做是完全应该而且非常恰当的。"
+        },
+        {
+          "text": "But, in a larger sense, we can not dedicate, we can not consecrate, we can not hallow this ground.",
+          "translation": "但是，从更广的意义上说，这块土地我们不能够奉献，不能够圣化，不能够神化。"
+        },
+        {
+          "text": "The brave men, living and dead, who struggled here, have consecrated it, far above our poor power to add or detract.",
+          "translation": "那些曾在这里战斗过的勇士们，活着的和死去的，已经把这块土地圣化了，这远不是我们微薄的力量所能增减的。"
+        },
+        {
+          "text": "The world will little note, nor long remember what we say here, but it can never forget what they did here.",
+          "translation": "世人不会注意，也不会长久记住我们在这里说的话，但永远不会忘记他们在这里做过的事。"
+        },
+        {
+          "text": "It is for us the living, rather, to be dedicated here to the unfinished work which they who fought here have thus far so nobly advanced.",
+          "translation": "毋宁说，我们这些活着的人，应该在这里把自己奉献给那些曾在此战斗的人已经如此崇高地推进了的未竟事业。"
+        },
+        {
+          "text": "It is rather for us to be here dedicated to the great task remaining before us, that from these honored dead we take increased devotion to that cause for which they gave the last full measure of devotion, that we here highly resolve that these dead shall not have died in vain, that this nation, under God, shall have a new birth of freedom, and that government of the people, by the people, for the people, shall not perish from the earth.",
+          "translation": "我们更应该在这里献身于摆在我们面前的伟大任务：从这些光荣的死者身上汲取更多的献身精神，去完成他们已为之献出全部忠诚的事业；我们在此下定决心，不让这些死者白白牺牲；让这个国家在上帝庇佑下获得自由的新生；让民有、民治、民享的政府永世长存。"
+        }
+      ]
+    }
+  ]
+}

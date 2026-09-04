@@ -1,0 +1,66 @@
+{
+  "id": "aesop-north-wind",
+  "title": "The North Wind and the Sun",
+  "title_zh": "北风与太阳",
+  "description": "A classic fable about persuasion and force.",
+  "description_zh": "关于“说服”与“强迫”的经典寓言。",
+  "level": "A2",
+  "topic": "寓言",
+  "language": "en",
+  "source": "Aesop's Fables (public domain), retold",
+  "segments": [
+    {
+      "source_ref": "aesop.txt",
+      "units": [
+        {
+          "text": "The North Wind and the Sun were arguing about which of them was stronger.",
+          "translation": "北风和太阳争论谁更强。"
+        },
+        {
+          "text": "While they argued, a traveler came down the road, wrapped in a warm cloak.",
+          "translation": "他们争着争着，一个裹着厚斗篷的旅人从路上走来。"
+        },
+        {
+          "text": "\"Let's settle this,\" said the Sun. \"Whoever can make that man take off his cloak is the stronger.\"",
+          "translation": "“咱们这样定，”太阳说，“谁能让那个人脱下斗篷，谁就更强。”"
+        },
+        {
+          "text": "The North Wind went first.",
+          "translation": "北风先来。"
+        },
+        {
+          "text": "He blew as hard as he could, and the cold air rushed down the road.",
+          "translation": "他用尽全力地吹，寒风顺着道路呼啸而下。"
+        },
+        {
+          "text": "But the harder he blew, the tighter the traveler held his cloak around him.",
+          "translation": "可他吹得越猛，旅人就把斗篷裹得越紧。"
+        },
+        {
+          "text": "Finally, the North Wind gave up.",
+          "translation": "最后，北风放弃了。"
+        },
+        {
+          "text": "Then the Sun came out and shone gently on the traveler.",
+          "translation": "接着太阳出来了，温和地照在旅人身上。"
+        },
+        {
+          "text": "Soon the man felt warm, and he loosened his cloak.",
+          "translation": "很快旅人觉得暖和了，松开了斗篷。"
+        },
+        {
+          "text": "A little later, he took it off completely and sat down in the shade to rest.",
+          "translation": "又过了一会儿，他干脆把斗篷脱下来，坐到树荫下休息。"
+        },
+        {
+          "text": "So the Sun won, and the North Wind had to admit it.",
+          "translation": "于是太阳赢了，北风只好认输。"
+        },
+        {
+          "text": "Gentleness often works better than force.",
+          "translation": "温和常常比强硬更有效。"
+        }
+      ]
+    }
+  ]
+}
